@@ -190,17 +190,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const updateStats = useCallback((updates: Partial<UserStats>) => {
     setUserData(prev => {
         const newStats: UserStats = {
-            level: prev.stats.level,
+            ...prev.stats,
             xp: (prev.stats.xp || 0) + (updates.xp || 0),
             points: (prev.stats.points || 0) + (updates.points || 0),
-            dailyPoints: ((prev.stats.dailyPoints || 0) + (updates.points || 0)),
-            weeklyPoints: ((prev.stats.weeklyPoints || 0) + (updates.points || 0)),
-            monthlyPoints: ((prev.stats.monthlyPoints || 0) + (updates.points || 0)),
             coins: (prev.stats.coins || 0) + (updates.coins || 0),
+            // Daily/Weekly/Monthly points should be handled by a separate, periodic function.
+            // For now, we ensure they exist.
+            dailyPoints: (prev.stats.dailyPoints || 0) + (updates.points || 0),
+            weeklyPoints: (prev.stats.weeklyPoints || 0) + (updates.points || 0),
+            monthlyPoints: (prev.stats.monthlyPoints || 0) + (updates.points || 0),
         };
 
         const currentLevel = prev.stats.level || 1;
-        const newLevel = LEVEL_THRESHOLDS.filter(xp => newStats.xp >= xp).length;
+        // The level calculation now correctly finds the new level based on total XP.
+        const newLevel = LEVEL_THRESHOLDS.filter(xp => newStats.xp >= xp).length || 1;
         
         if (newLevel > currentLevel) {
             newStats.level = newLevel;

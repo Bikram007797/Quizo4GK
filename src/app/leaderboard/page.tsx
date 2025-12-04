@@ -54,21 +54,27 @@ function LeaderboardTab({ period }: LeaderboardTabProps) {
 
   const { data: users, isLoading } = useCollection<UserData>(leaderboardQuery);
 
-  const rankedUsers = useMemo(() => {
-    // The query is already ordered by points, so we just need to add the rank
-    // Filter out users named 'Anonymous' on the client side.
-    const filteredUsers = users?.filter(user => user.username !== 'Anonymous') ?? [];
-    return filteredUsers.map((user, index) => ({ ...user, rank: index + 1 }));
-  }, [users]);
-  
   const getPointsForPeriod = (user: UserData) => {
-      switch (period) {
-          case 'daily': return user.stats.dailyPoints || 0;
-          case 'weekly': return user.stats.weeklyPoints || 0;
-          case 'monthly': return user.stats.monthlyPoints || 0;
-          default: return user.stats.points;
-      }
+    switch (period) {
+        case 'daily': return user.stats.dailyPoints || 0;
+        case 'weekly': return user.stats.weeklyPoints || 0;
+        case 'monthly': return user.stats.monthlyPoints || 0;
+        default: return user.stats.points;
+    }
   }
+
+  const rankedUsers = useMemo(() => {
+    // Filter out users who have 0 points for the current period and are not anonymous.
+    const filteredUsers = users?.filter(user => {
+        const points = getPointsForPeriod(user);
+        // Show user if they have points, OR if they have a real username (not 'Anonymous')
+        return points > 0 || (user.username && user.username !== 'Anonymous');
+    }) ?? [];
+    
+    // Now that we have a filtered list, map them to add ranks.
+    return filteredUsers.map((user, index) => ({ ...user, rank: index + 1 }));
+  }, [users, period]);
+  
 
   return (
     <CardContent>

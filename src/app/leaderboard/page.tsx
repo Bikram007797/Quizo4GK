@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Trophy } from 'lucide-react';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { collection, query, orderBy, limit, where } from 'firebase/firestore';
 import { useFirestore } from '@/firebase/provider';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { UserData } from '@/lib/types';
@@ -50,7 +50,12 @@ function LeaderboardTab({ period }: LeaderboardTabProps) {
 
   const leaderboardQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'users'), orderBy(pointsField, 'desc'), limit(50));
+    return query(
+        collection(firestore, 'users'), 
+        where(pointsField, '>', 0), // Fetch only users with points > 0
+        orderBy(pointsField, 'desc'), 
+        limit(50)
+    );
   }, [firestore, pointsField]);
 
   const { data: users, isLoading } = useCollection<UserData>(leaderboardQuery);

@@ -151,20 +151,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (isLoading || isUserLoading) return;
 
     if (firebaseUser) {
-      if (firebaseUser.isAnonymous) {
-        // Save to localStorage for anonymous users
-        saveAnonymousData(userData);
-      } else {
-        // Save to Firestore for logged-in users
-        if (userData !== INITIAL_USER_DATA) { // Avoid writing initial data
-          const userDocRef = doc(firestore, 'users', firebaseUser.uid);
-          setDoc(userDocRef, userData, { merge: true }).catch(error => {
-            console.error("Failed to save user data to Firestore", error);
-          });
+        // Avoid writing initial data or unchanged data
+        const isInitialData = JSON.stringify(userData) === JSON.stringify({ ...INITIAL_USER_DATA, id: userData.id, username: userData.username });
+
+        if (!isInitialData) {
+            if (firebaseUser.isAnonymous) {
+                // Save to localStorage for anonymous users
+                saveAnonymousData(userData);
+            } else {
+                // Save to Firestore for logged-in users
+                const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+                setDoc(userDocRef, userData, { merge: true }).catch(error => {
+                    console.error("Failed to save user data to Firestore", error);
+                });
+            }
         }
-      }
     }
-  }, [userData, firebaseUser, isUserLoading, isLoading, firestore, saveAnonymousData]);
+}, [userData, firebaseUser, isUserLoading, isLoading, firestore, saveAnonymousData]);
+
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -194,8 +198,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             xp: (prev.stats.xp || 0) + (updates.xp || 0),
             points: (prev.stats.points || 0) + (updates.points || 0),
             coins: (prev.stats.coins || 0) + (updates.coins || 0),
-            // Daily/Weekly/Monthly points should be handled by a separate, periodic function.
-            // For now, we ensure they exist.
             dailyPoints: (prev.stats.dailyPoints || 0) + (updates.points || 0),
             weeklyPoints: (prev.stats.weeklyPoints || 0) + (updates.points || 0),
             monthlyPoints: (prev.stats.monthlyPoints || 0) + (updates.points || 0),

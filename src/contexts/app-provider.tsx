@@ -1,11 +1,11 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import type { AppContextType, AppTheme, UserData, Attempt, UserStats } from '@/lib/types';
+import type { AppContextType, AppTheme, UserData, UserStats, Attempt } from '@/lib/types';
 import { INITIAL_USER_DATA, LEVEL_THRESHOLDS } from '@/lib/constants';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth, useFirestore, useUser } from '@/firebase';
-import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { signInAnonymously } from 'firebase/auth';
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -20,7 +20,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
   const { user: firebaseUser, isUserLoading } = useUser();
 
-  const loadInitialTheme = useCallback(() => {
+  // Load theme from localStorage on initial mount
+  useEffect(() => {
     try {
       const storedTheme = localStorage.getItem('quizo_theme') as AppTheme | null;
       if (storedTheme) {
@@ -30,162 +31,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       console.warn("Could not load theme from localStorage", error);
     }
   }, []);
-
-  const loadAnonymousData = useCallback(() => {
-    try {
-      const localData = localStorage.getItem('quizo_anonymous_data');
-      if (localData) {
-        return JSON.parse(localData);
-      }
-    } catch (error) {
-      console.warn("Could not parse anonymous user data from localStorage", error);
-    }
-    return INITIAL_USER_DATA;
-  }, []);
-
-  const saveAnonymousData = useCallback((data: UserData) => {
-    try {
-      localStorage.setItem('quizo_anonymous_data', JSON.stringify(data));
-    } catch (error) {
-      console.warn("Could not save anonymous user data to localStorage", error);
-    }
-  }, []);
-
-  const mergeAnonymousData = useCallback(async (userId: string, anonData: UserData) => {
-    if (!firestore) return;
-    const userDocRef = doc(firestore, 'users', userId);
-    
-    try {
-      const userDocSnap = await getDoc(userDocRef);
-      if (!userDocSnap.exists()) return;
-      
-      const cloudData = userDocSnap.data() as UserData;
-
-      const newStats: UserStats = {
-        points: cloudData.stats.points + anonData.stats.points,
-        dailyPoints: (cloudData.stats.dailyPoints || 0) + (anonData.stats.dailyPoints || 0),
-        weeklyPoints: (cloudData.stats.weeklyPoints || 0) + (anonData.stats.weeklyPoints || 0),
-        monthlyPoints: (cloudData.stats.monthlyPoints || 0) + (anonData.stats.monthlyPoints || 0),
-        coins: cloudData.stats.coins + anonData.stats.coins,
-        xp: cloudData.stats.xp + anonData.stats.xp,
-        level: cloudData.stats.level || 1,
-      };
-      
-      const newBookmarks = [...new Set([...cloudData.bookmarks, ...anonData.bookmarks])];
-      const newCompletedSets = [...new Set([...cloudData.completedSets, ...anonData.completedSets])];
-
-      const newAttempts = { ...cloudData.attempts };
-      for (const quizSetId in anonData.attempts) {
-        const existingAttempts = newAttempts[quizSetId] || [];
-        newAttempts[quizSetId] = [...existingAttempts, ...anonData.attempts[quizSetId]];
-      }
-      
-      const finalData: Partial<UserData> = {
-        stats: newStats,
-        bookmarks: newBookmarks,
-        completedSets: newCompletedSets,
-        attempts: newAttempts,
-      };
-
-      const newLevel = LEVEL_THRESHOLDS.filter(xp => finalData.stats!.xp >= xp).length;
-      finalData.stats!.level = Math.max(1, newLevel);
-      
-      await updateDoc(userDocRef, finalData);
-      
-      localStorage.removeItem('quizo_anonymous_data');
-
-    } catch (error) {
-      console.error("Error merging anonymous data:", error);
-    }
-  }, [firestore]);
-
-
-  useEffect(() => {
-    loadInitialTheme();
-  }, [loadInitialTheme]);
-
-  useEffect(() => {
-    const manageUserData = async () => {
-      if (isUserLoading) {
-        setIsLoading(true);
-        return;
-      }
-
-      if (firebaseUser) {
-        setIsLoading(true);
-        const userDocRef = doc(firestore, 'users', firebaseUser.uid);
-        
-        // Handle merging of anonymous data right after a real user logs in
-        if (!firebaseUser.isAnonymous && localStorage.getItem('quizo_anonymous_data')) {
-            const anonData = loadAnonymousData();
-            if (anonData.stats.points > 0 || anonData.bookmarks.length > 0) {
-              await mergeAnonymousData(firebaseUser.uid, anonData);
-            } else {
-              localStorage.removeItem('quizo_anonymous_data');
-            }
-        }
-        
-        try {
-          const userDocSnap = await getDoc(userDocRef);
-          if (userDocSnap.exists()) {
-            setUserData(userDocSnap.data() as UserData);
-          } else {
-            // This can happen if signup succeeds for auth but fails for firestore.
-            // Let's create the doc here as a fallback.
-            const initialData = { 
-              ...INITIAL_USER_DATA, 
-              id: firebaseUser.uid, 
-              username: firebaseUser.displayName || 'Anonymous',
-              email: firebaseUser.email || '',
-            };
-            await setDoc(userDocRef, initialData);
-            setUserData(initialData);
-          }
-        } catch (error) {
-          console.error("Failed to load user data from Firestore", error);
-          setUserData(INITIAL_USER_DATA);
-        } finally {
-          setIsLoading(false);
-        }
-
-      } else {
-        // No user is logged in. Either sign in anonymously or load existing anonymous data.
-        const anonData = loadAnonymousData();
-        if (anonData && anonData.id) { // Check if there's existing anon data
-            setUserData(anonData);
-            setIsLoading(false);
-        } else {
-            signInAnonymously(auth).catch(err => {
-              console.error("Anonymous sign in failed:", err);
-              setIsLoading(false);
-            });
-        }
-      }
-    };
-
-    manageUserData();
-  }, [firebaseUser, isUserLoading, firestore, auth, loadAnonymousData, mergeAnonymousData]);
-
-
-  useEffect(() => {
-    // This effect handles persisting data changes.
-    if (isLoading || isUserLoading || !firebaseUser) return;
   
-    // Avoid saving the initial blank data structure on first load
-    if (userData.id === '' || userData.id === INITIAL_USER_DATA.id) return;
-  
-    if (firebaseUser.isAnonymous) {
-      saveAnonymousData(userData);
-    } else {
-      // For real users, save to Firestore.
-      const userDocRef = doc(firestore, 'users', firebaseUser.uid);
-      setDoc(userDocRef, userData, { merge: true }).catch(error => {
-        console.error("Failed to save user data to Firestore", error);
-      });
-    }
-  }, [userData, firebaseUser, isUserLoading, isLoading, firestore, saveAnonymousData]);
-
-
+  // Apply theme to DOM
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
@@ -198,81 +45,177 @@ export function AppProvider({ children }: { children: ReactNode }) {
     root.classList.add(effectiveTheme);
     try {
       localStorage.setItem('quizo_theme', theme);
-    } catch (error) {
+    } catch (error)      {
       console.warn("Could not save theme to localStorage", error);
     }
   }, [theme]);
+
+
+  // Effect to manage user data loading and synchronization
+  useEffect(() => {
+    if (isUserLoading) {
+      setIsLoading(true);
+      return;
+    }
+
+    if (firebaseUser) {
+      // Real user is logged in, set up a real-time listener
+      const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+      const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          setUserData(docSnap.data() as UserData);
+        } else {
+          // This can happen briefly during signup. The signup page now handles creation.
+          // We can set a default state here or wait. Let's set initial.
+          setUserData({ 
+            ...INITIAL_USER_DATA, 
+            id: firebaseUser.uid, 
+            username: firebaseUser.displayName || 'New User',
+            email: firebaseUser.email || '',
+          });
+        }
+        setIsLoading(false);
+      }, (error) => {
+        console.error("Error listening to user document:", error);
+        setIsLoading(false);
+      });
+
+      return () => unsubscribe(); // Cleanup listener on unmount or user change
+    
+    } else {
+      // No user is logged in, handle anonymous user
+      let localData: UserData | null = null;
+      try {
+        const localDataString = localStorage.getItem('quizo_anonymous_data');
+        if (localDataString) {
+          localData = JSON.parse(localDataString);
+        }
+      } catch (e) { console.warn("Could not parse anonymous data") }
+
+      if (localData && localData.id) {
+        setUserData(localData);
+      } else {
+        const newAnonData = { ...INITIAL_USER_DATA, id: `anon_${Date.now()}`};
+        setUserData(newAnonData);
+        localStorage.setItem('quizo_anonymous_data', JSON.stringify(newAnonData));
+      }
+      setIsLoading(false);
+    }
+  }, [firebaseUser, isUserLoading, firestore]);
+
+  // Persist anonymous data to localStorage whenever it changes
+  useEffect(() => {
+    if (!firebaseUser && !isUserLoading && userData.id.startsWith('anon_')) {
+      localStorage.setItem('quizo_anonymous_data', JSON.stringify(userData));
+    }
+  }, [userData, firebaseUser, isUserLoading]);
+
 
   const setTheme = (newTheme: AppTheme) => {
     setThemeState(newTheme);
   };
   
   const updateStats = useCallback((updates: Partial<UserStats>) => {
-    setUserData(prev => {
+    if (!firebaseUser) { // Handle anonymous user case
+      setUserData(prev => {
         const newStats: UserStats = {
-            ...prev.stats,
-            xp: (prev.stats.xp || 0) + (updates.xp || 0),
-            points: (prev.stats.points || 0) + (updates.points || 0),
-            coins: (prev.stats.coins || 0) + (updates.coins || 0),
-            dailyPoints: (prev.stats.dailyPoints || 0) + (updates.points || 0),
-            weeklyPoints: (prev.stats.weeklyPoints || 0) + (updates.points || 0),
-            monthlyPoints: (prev.stats.monthlyPoints || 0) + (updates.points || 0),
+          ...prev.stats,
+          xp: (prev.stats.xp || 0) + (updates.xp || 0),
+          points: (prev.stats.points || 0) + (updates.points || 0),
+          coins: (prev.stats.coins || 0) + (updates.coins || 0),
         };
-
         const currentLevel = prev.stats.level || 1;
         const newLevel = LEVEL_THRESHOLDS.filter(xp => newStats.xp >= xp).length || 1;
+        newStats.level = Math.max(currentLevel, newLevel);
+        return { ...prev, stats: newStats };
+      });
+      return;
+    }
+
+    // Handle registered user
+    const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+    getDoc(userDocRef).then(docSnap => {
+      if (docSnap.exists()) {
+        const currentStats = docSnap.data().stats as UserStats;
+        const newStats: Partial<UserData['stats']> = {
+          xp: (currentStats.xp || 0) + (updates.xp || 0),
+          points: (currentStats.points || 0) + (updates.points || 0),
+          coins: (currentStats.coins || 0) + (updates.coins || 0),
+        };
         
-        if (newLevel > currentLevel) {
-            newStats.level = newLevel;
-            toast({
-              title: "Level Up!",
-              description: `Congratulations! You've reached Level ${newLevel}.`,
-            });
-        } else {
-            newStats.level = currentLevel;
+        const newLevel = LEVEL_THRESHOLDS.filter(xp => newStats.xp! >= xp).length || 1;
+        if (newLevel > currentStats.level) {
+          newStats.level = newLevel;
+          toast({
+            title: "Level Up!",
+            description: `Congratulations! You've reached Level ${newLevel}.`,
+          });
         }
-      
-      return { ...prev, stats: newStats };
+        
+        updateDoc(userDocRef, { stats: { ...currentStats, ...newStats } });
+      }
     });
-  }, [toast]);
+  }, [firebaseUser, firestore, toast]);
 
   const addAttempt = useCallback((attempt: Attempt) => {
-    setUserData(prev => {
-      const existingAttempts = prev.attempts[attempt.quizSetId] || [];
-      return {
-        ...prev,
-        attempts: {
-          ...prev.attempts,
-          [attempt.quizSetId]: [...existingAttempts, attempt],
-        },
-      };
+    if (!firebaseUser) { // Handle anonymous user
+       setUserData(prev => {
+         const existingAttempts = prev.attempts[attempt.quizSetId] || [];
+         return {
+           ...prev,
+           attempts: {
+             ...prev.attempts,
+             [attempt.quizSetId]: [...existingAttempts, attempt],
+           },
+         };
+       });
+       return;
+    }
+    // Handle registered user
+    const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+    getDoc(userDocRef).then(docSnap => {
+        if (docSnap.exists()) {
+            const currentAttempts = docSnap.data().attempts || {};
+            const existingAttempts = currentAttempts[attempt.quizSetId] || [];
+            updateDoc(userDocRef, {
+                [`attempts.${attempt.quizSetId}`]: [...existingAttempts, attempt]
+            });
+        }
     });
-  }, []);
+  }, [firebaseUser, firestore]);
 
   const toggleBookmark = useCallback((questionId: string) => {
-    setUserData(prev => {
-      const isCurrentlyBookmarked = prev.bookmarks.includes(questionId);
-      const newBookmarks = isCurrentlyBookmarked
-        ? prev.bookmarks.filter(id => id !== questionId)
-        : [...prev.bookmarks, questionId];
-      
-      setTimeout(() => {
-        if (!isCurrentlyBookmarked) {
-          toast({
-              title: "Bookmarked!",
-              description: "You can find this question in your bookmarks to review later.",
-          });
-        } else {
-          toast({
-              title: "Bookmark Removed",
-              description: "The question has been removed from your bookmarks.",
-          });
-        }
-      }, 0);
+    if (!firebaseUser) { // Handle anonymous user
+        setUserData(prev => {
+          const isBookmarked = prev.bookmarks.includes(questionId);
+          const newBookmarks = isBookmarked
+            ? prev.bookmarks.filter(id => id !== questionId)
+            : [...prev.bookmarks, questionId];
+          return { ...prev, bookmarks: newBookmarks };
+        });
+    } else { // Handle registered user
+        const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+        getDoc(userDocRef).then(docSnap => {
+            if (docSnap.exists()) {
+                const currentBookmarks = docSnap.data().bookmarks || [];
+                const isBookmarked = currentBookmarks.includes(questionId);
+                const newBookmarks = isBookmarked
+                  ? currentBookmarks.filter((id:string) => id !== questionId)
+                  : [...currentBookmarks, questionId];
+                updateDoc(userDocRef, { bookmarks: newBookmarks });
+            }
+        });
+    }
 
-      return { ...prev, bookmarks: newBookmarks };
-    });
-  }, [toast]);
+    setTimeout(() => {
+        toast({
+            title: userData.bookmarks.includes(questionId) ? "Bookmark Removed" : "Bookmarked!",
+            description: userData.bookmarks.includes(questionId) 
+              ? "The question has been removed from your bookmarks."
+              : "You can find this question in your bookmarks to review later.",
+        });
+    }, 0);
+  }, [firebaseUser, firestore, toast, userData.bookmarks]);
 
 
   const isBookmarked = useCallback((questionId: string) => {
@@ -280,16 +223,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [userData.bookmarks]);
 
   const markSetAsCompleted = useCallback((quizSetId: string) => {
-    setUserData(prev => {
-      if (prev.completedSets.includes(quizSetId)) {
-        return prev;
-      }
-      return {
-        ...prev,
-        completedSets: [...prev.completedSets, quizSetId],
-      };
-    });
-  }, []);
+    if (userData.completedSets.includes(quizSetId)) return;
+
+    if (!firebaseUser) { // Handle anonymous user
+       setUserData(prev => ({ ...prev, completedSets: [...prev.completedSets, quizSetId] }));
+    } else { // Handle registered user
+        const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+        getDoc(userDocRef).then(docSnap => {
+            if (docSnap.exists()) {
+                const completed = docSnap.data().completedSets || [];
+                if (!completed.includes(quizSetId)) {
+                    updateDoc(userDocRef, { completedSets: [...completed, quizSetId] });
+                }
+            }
+        });
+    }
+  }, [firebaseUser, firestore, userData.completedSets]);
 
   const getBestScore = useCallback((quizSetId: string) => {
     const attempts = userData.attempts[quizSetId];

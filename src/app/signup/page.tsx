@@ -58,39 +58,38 @@ export default function SignupPage() {
         email: values.email,
       };
       
-      // 4. Create user document in Firestore (non-blocking)
-      // This will now pass the security rules.
-      setDoc(userDocRef, newUserData)
-        .then(() => {
-            toast({
-              title: 'Account Created!',
-              description: `Welcome to ${APP_NAME}, ${values.username}!`,
-            });
-            router.push('/'); // Navigate on success
-        })
-        .catch(async (error) => {
-            // This will now be a detailed FirestorePermissionError
-            console.error("Firestore setDoc failed:", error);
-            const permissionError = new FirestorePermissionError({
-              path: userDocRef.path,
-              operation: 'create',
-              requestResourceData: newUserData,
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            setIsLoading(false); // Stop loading on Firestore error
-        });
+      // 4. Create user document in Firestore.
+      // We will now await this to ensure the document exists before redirecting.
+      await setDoc(userDocRef, newUserData);
+
+      toast({
+        title: 'Account Created!',
+        description: `Welcome to ${APP_NAME}, ${values.username}!`,
+      });
+      router.push('/'); // Navigate on success
 
     } catch (error: any) {
-      // This catch block now only handles Authentication errors
-      console.error('Signup auth error:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Sign Up Failed',
-        description: error.code === 'auth/email-already-in-use' 
-            ? 'This email is already in use.' 
-            : 'An unexpected error occurred during sign-up.',
-      });
-      setIsLoading(false);
+      console.error('Signup error:', error);
+      
+      // Check if it's a Firestore error
+      if (error.name === 'FirebaseError' && error.code.startsWith('permission-denied')) {
+         const permissionError = new FirestorePermissionError({
+            path: `users/${auth.currentUser?.uid || 'unknown'}`,
+            operation: 'create',
+            requestResourceData: { username: values.username, email: values.email },
+         });
+         errorEmitter.emit('permission-error', permissionError);
+      } else { // Handle Auth errors
+        toast({
+          variant: 'destructive',
+          title: 'Sign Up Failed',
+          description: error.code === 'auth/email-already-in-use' 
+              ? 'This email is already in use.' 
+              : 'An unexpected error occurred during sign-up.',
+        });
+      }
+    } finally {
+        setIsLoading(false);
     }
   }
 

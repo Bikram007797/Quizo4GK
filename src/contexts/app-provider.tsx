@@ -5,7 +5,9 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import type { AppContextType, AppTheme, UserData, Attempt, UserStats } from '@/lib/types';
 import { INITIAL_USER_DATA, LEVEL_THRESHOLDS } from '@/lib/constants';
 import { useToast } from "@/hooks/use-toast";
-
+import { useAuth, useFirestore, useUser } from '@/firebase';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { signInAnonymously } from 'firebase/auth';
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -15,33 +17,67 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
+  const auth = useAuth();
+  const firestore = useFirestore();
+  const { user: firebaseUser, isUserLoading } = useUser();
+
   useEffect(() => {
-    try {
-      const storedUserData = localStorage.getItem('quizo_userData');
-      if (storedUserData) {
-        setUserData(JSON.parse(storedUserData));
+    if (!isUserLoading && !firebaseUser) {
+      signInAnonymously(auth);
+    }
+  }, [isUserLoading, firebaseUser, auth]);
+
+
+  useEffect(() => {
+    async function loadUserData() {
+      if (firebaseUser && firestore) {
+        setIsLoading(true);
+        const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+        try {
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+            setUserData(userDocSnap.data() as UserData);
+          } else {
+            // No document yet, create one with initial data
+            await setDoc(userDocRef, INITIAL_USER_DATA);
+            setUserData(INITIAL_USER_DATA);
+          }
+        } catch (error) {
+          console.error("Failed to load user data from Firestore", error);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        // Not logged in, or services not ready
+        setIsLoading(false);
       }
-      
+    }
+
+    loadUserData();
+
+    try {
       const storedTheme = localStorage.getItem('quizo_theme') as AppTheme | null;
       if (storedTheme) {
         setThemeState(storedTheme);
       }
     } catch (error) {
-      console.error("Failed to load data from localStorage", error);
-    } finally {
-      setIsLoading(false);
+      console.error("Failed to load theme from localStorage", error);
     }
-  }, []);
+  }, [firebaseUser, firestore]);
 
   useEffect(() => {
-    if (!isLoading) {
-      try {
-        localStorage.setItem('quizo_userData', JSON.stringify(userData));
-      } catch (error) {
-        console.error("Failed to save user data to localStorage", error);
+    async function saveUserData() {
+      if (!isLoading && firebaseUser && firestore && userData !== INITIAL_USER_DATA) {
+        const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+        try {
+          await setDoc(userDocRef, userData, { merge: true });
+        } catch (error) {
+          console.error("Failed to save user data to Firestore", error);
+        }
       }
     }
-  }, [userData, isLoading]);
+    saveUserData();
+  }, [userData, isLoading, firebaseUser, firestore]);
   
   useEffect(() => {
     const root = window.document.documentElement;
@@ -172,7 +208,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     getBestScore,
     getAttemptsCount,
     getLastAttempt,
-    isLoading
+    isLoading: isLoading || isUserLoading,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

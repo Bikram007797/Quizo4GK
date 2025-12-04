@@ -45,13 +45,18 @@ service cloud.firestore {
     // User Data Collections
     // --------------------------------
 
+    // Allow any signed-in user to list the entire 'users' collection for the leaderboard.
     match /users/{userId} {
-      // Any signed-in user can read a specific user's profile.
-      // This is needed for leaderboards and viewing other profiles.
-      allow get: if isSignedIn();
-
-      // A user can only create, update, or delete their own document.
+      allow list: if isSignedIn();
+    }
+    
+    // Rules for individual user documents
+    match /users/{userId} {
+      // A user can read their own document.
+      allow get: if isOwner(userId);
+      // A user can create their own document, ensuring the ID matches.
       allow create: if isOwner(userId) && request.resource.data.id == userId;
+      // A user can update or delete their own document.
       allow update, delete: if isOwner(userId);
       
       // Subcollection rules
@@ -64,12 +69,6 @@ service cloud.firestore {
       match /userBadges/{userBadgeId} {
         allow read, write: if isOwner(userId);
       }
-    }
-    
-    // Allow any authenticated user to list the entire 'users' collection.
-    // This is required for the leaderboard query.
-    match /users/{document=**} {
-      allow list: if isSignedIn();
     }
     
     // --------------------------------

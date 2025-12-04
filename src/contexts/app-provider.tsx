@@ -236,17 +236,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ? prev.bookmarks.filter(id => id !== questionId)
         : [...prev.bookmarks, questionId];
       
-      if (!isCurrentlyBookmarked) {
-        toast({
-            title: "Bookmarked!",
-            description: "You can find this question in your bookmarks to review later.",
-        });
-      } else {
-        toast({
-            title: "Bookmark Removed",
-            description: "The question has been removed from your bookmarks.",
-        });
-      }
+      // Defer toast call to avoid state update during render
+      setTimeout(() => {
+        if (!isCurrentlyBookmarked) {
+          toast({
+              title: "Bookmarked!",
+              description: "You can find this question in your bookmarks to review later.",
+          });
+        } else {
+          toast({
+              title: "Bookmark Removed",
+              description: "The question has been removed from your bookmarks.",
+          });
+        }
+      }, 0);
 
       return { ...prev, bookmarks: newBookmarks };
     });

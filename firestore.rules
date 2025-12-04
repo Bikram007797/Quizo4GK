@@ -45,21 +45,14 @@ service cloud.firestore {
     // User Data Collections
     // --------------------------------
 
-    // Allow any signed-in user to list the entire 'users' collection for the leaderboard.
+    // Any signed-in user can read the users collection for the leaderboard.
+    // Users can only create/update/delete their own document.
     match /users/{userId} {
-      allow list: if isSignedIn();
-    }
-    
-    // Rules for individual user documents
-    match /users/{userId} {
-      // A user can read their own document.
-      allow get: if isOwner(userId);
-      // A user can create their own document, ensuring the ID matches.
+      allow read: if isSignedIn();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
-      // A user can update or delete their own document.
       allow update, delete: if isOwner(userId);
-      
-      // Subcollection rules
+
+      // Subcollection rules inherit ownership.
       match /quizSetAttempts/{quizSetAttemptId} {
         allow read, write: if isOwner(userId);
       }

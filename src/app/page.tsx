@@ -1,10 +1,18 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUser } from '@/firebase';
+import { Loader2 } from 'lucide-react';
+import { APP_NAME } from '@/lib/constants';
+
 import Link from 'next/link';
 import { AppHeader } from '@/components/app-header';
 import { UserStats } from '@/components/user-stats';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, BookMarked, User, Calendar, CalendarDays, Trophy } from 'lucide-react';
-import { APP_NAME, DEVELOPER_CREDIT } from '@/lib/constants';
+import { DEVELOPER_CREDIT } from '@/lib/constants';
 
 const menuItems = [
   {
@@ -44,7 +52,30 @@ const menuItems = [
   },
 ];
 
+
 export default function Home() {
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    // If auth state is not loading and user is not logged in (or is anonymous),
+    // redirect to the login page.
+    if (!isUserLoading && (!user || user.isAnonymous)) {
+      router.replace('/login');
+    }
+  }, [user, isUserLoading, router]);
+
+  // While checking auth, show a loading screen.
+  // This prevents the page content from flashing before the redirect.
+  if (isUserLoading || !user || user.isAnonymous) {
+    return (
+      <div className="flex h-screen w-full flex-col items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Loading your experience...</p>
+      </div>
+    );
+  }
+  
   const HomeHeaderTitle = (
     <div className="flex flex-col items-center">
       <h1 className="text-2xl font-bold tracking-tighter sm:text-3xl font-headline">{APP_NAME}</h1>

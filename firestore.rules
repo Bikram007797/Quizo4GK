@@ -49,8 +49,7 @@ service cloud.firestore {
     // Users can only create/update/delete their own document.
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update, delete: if isOwner(userId);
+      allow write: if isOwner(userId);
 
       // Subcollection rules inherit ownership.
       match /quizSetAttempts/{quizSetAttemptId} {

@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Trophy } from 'lucide-react';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, orderBy, limit, where } from 'firebase/firestore';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { useFirestore } from '@/firebase/provider';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { UserData } from '@/lib/types';
@@ -46,11 +46,9 @@ function LeaderboardTab({ period }: LeaderboardTabProps) {
   const leaderboardQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
-        collection(firestore, 'users'), 
-        where('username', '!=', 'Anonymous'), // Fetch only users with a real username
-        orderBy('username'), // This is needed for the inequality filter, but we sort by points next.
-        orderBy(pointsField, 'desc'), 
-        limit(50)
+      collection(firestore, 'users'),
+      orderBy(pointsField, 'desc'),
+      limit(50)
     );
   }, [firestore, pointsField]);
 
@@ -58,7 +56,9 @@ function LeaderboardTab({ period }: LeaderboardTabProps) {
 
   const rankedUsers = useMemo(() => {
     // The query is already ordered by points, so we just need to add the rank
-    return users?.map((user, index) => ({ ...user, rank: index + 1 })) ?? [];
+    // Filter out users named 'Anonymous' on the client side.
+    const filteredUsers = users?.filter(user => user.username !== 'Anonymous') ?? [];
+    return filteredUsers.map((user, index) => ({ ...user, rank: index + 1 }));
   }, [users]);
   
   const getPointsForPeriod = (user: UserData) => {

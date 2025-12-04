@@ -40,13 +40,13 @@ export function QuizView({ quizSet }: QuizViewProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    setStartTime(Date.now());
+    const now = Date.now();
+    setStartTime(now);
     const timer = setInterval(() => {
-      // Use functional update to ensure we are getting the latest startTime
-      setElapsedTime(prevTime => Math.floor((Date.now() - startTime) / 1000));
+      setElapsedTime(Math.floor((Date.now() - now) / 1000));
     }, 1000);
     return () => clearInterval(timer);
-  }, [startTime]);
+  }, []);
 
   const currentQuestion = quizSet.questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / quizSet.questions.length) * 100;

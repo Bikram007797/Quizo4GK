@@ -111,12 +111,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ? prev.bookmarks.filter(id => id !== questionId)
         : [...prev.bookmarks, questionId];
       
-      toast({
-        title: isCurrentlyBookmarked ? "Bookmark Removed" : "Bookmarked!",
-        description: isCurrentlyBookmarked
-          ? "The question has been removed from your bookmarks."
-          : "You can find this question in your bookmarks to review later.",
-      });
+      if (!isCurrentlyBookmarked) {
+        toast({
+            title: "Bookmarked!",
+            description: "You can find this question in your bookmarks to review later.",
+        });
+      } else {
+        toast({
+            title: "Bookmark Removed",
+            description: "The question has been removed from your bookmarks.",
+        });
+      }
 
       return { ...prev, bookmarks: newBookmarks };
     });
@@ -152,7 +157,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const getLastAttempt = useCallback((quizSetId: string): Attempt | null => {
     const attempts = userData.attempts[quizSetId];
     if (!attempts || attempts.length === 0) return null;
-    return attempts[attempts.length - 1];
+    return attempts.sort((a, b) => b.timestamp - a.timestamp)[0];
   }, [userData.attempts]);
 
   const value = {

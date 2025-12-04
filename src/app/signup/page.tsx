@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -56,23 +56,36 @@ export default function SignupPage() {
         username: values.username,
         email: values.email,
       };
-      await setDoc(userDocRef, newUserData);
+      
+      // Use non-blocking setDoc with error handling
+      setDoc(userDocRef, newUserData)
+        .then(() => {
+            toast({
+              title: 'Account Created!',
+              description: `Welcome to ${APP_NAME}, ${values.username}!`,
+            });
+            router.push('/');
+        })
+        .catch(async (error) => {
+            console.error("Firestore setDoc failed:", error);
+            const permissionError = new FirestorePermissionError({
+              path: userDocRef.path,
+              operation: 'create',
+              requestResourceData: newUserData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
 
-      toast({
-        title: 'Account Created!',
-        description: `Welcome to ${APP_NAME}, ${values.username}!`,
-      });
-      router.push('/');
     } catch (error: any) {
-      console.error('Signup error:', error);
+      console.error('Signup auth error:', error);
       toast({
         variant: 'destructive',
         title: 'Sign Up Failed',
         description: error.message || 'An unexpected error occurred. Please try again.',
       });
-    } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Only set loading to false on auth error
     }
+    // We don't set loading to false here because the non-blocking firestore call will navigate
   }
 
   return (

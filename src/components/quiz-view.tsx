@@ -42,7 +42,8 @@ export function QuizView({ quizSet }: QuizViewProps) {
   useEffect(() => {
     setStartTime(Date.now());
     const timer = setInterval(() => {
-      setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
+      // Use functional update to ensure we are getting the latest startTime
+      setElapsedTime(prevTime => Math.floor((Date.now() - startTime) / 1000));
     }, 1000);
     return () => clearInterval(timer);
   }, [startTime]);
@@ -146,17 +147,13 @@ export function QuizView({ quizSet }: QuizViewProps) {
           className="space-y-4"
         >
           {currentQuestion.options.map((option, index) => (
-            <Label
-              key={index}
-              htmlFor={`option-${index}`}
-              className={cn(
+            <div key={index} className={cn(
                 "flex items-center space-x-3 rounded-lg border p-4 transition-all cursor-pointer",
                 selectedOption === index ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'
-              )}
-            >
+              )}>
               <RadioGroupItem value={index.toString()} id={`option-${index}`} />
-              <span className="flex-1 cursor-pointer text-base">{option}</span>
-            </Label>
+              <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer text-base">{option}</Label>
+            </div>
           ))}
         </RadioGroup>
       </CardContent>

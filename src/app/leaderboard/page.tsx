@@ -25,25 +25,20 @@ type LeaderboardTabProps = {
 function LeaderboardTab({ period }: LeaderboardTabProps) {
   const firestore = useFirestore();
   const [pointsField, setPointsField] = useState('stats.points');
-  const [title, setTitle] = useState('All-Time Rankings');
 
   useMemo(() => {
     switch (period) {
       case 'daily':
         setPointsField('stats.dailyPoints');
-        setTitle('Daily Rankings');
         break;
       case 'weekly':
         setPointsField('stats.weeklyPoints');
-        setTitle('Weekly Rankings');
         break;
       case 'monthly':
         setPointsField('stats.monthlyPoints');
-        setTitle('Monthly Rankings');
         break;
       default:
         setPointsField('stats.points');
-        setTitle('All-Time Rankings');
         break;
     }
   }, [period]);
@@ -52,7 +47,8 @@ function LeaderboardTab({ period }: LeaderboardTabProps) {
     if (!firestore) return null;
     return query(
         collection(firestore, 'users'), 
-        where(pointsField, '>', 0), // Fetch only users with points > 0
+        where('username', '!=', 'Anonymous'), // Fetch only users with a real username
+        orderBy('username'), // This is needed for the inequality filter, but we sort by points next.
         orderBy(pointsField, 'desc'), 
         limit(50)
     );
@@ -61,6 +57,7 @@ function LeaderboardTab({ period }: LeaderboardTabProps) {
   const { data: users, isLoading } = useCollection<UserData>(leaderboardQuery);
 
   const rankedUsers = useMemo(() => {
+    // The query is already ordered by points, so we just need to add the rank
     return users?.map((user, index) => ({ ...user, rank: index + 1 })) ?? [];
   }, [users]);
   

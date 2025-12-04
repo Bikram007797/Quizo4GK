@@ -29,7 +29,7 @@ export default function ChallengesPage({ params }: ChallengesPageProps) {
           <h2 className="mb-6 text-2xl font-bold tracking-tight font-headline">Select a Subject</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             {subjects.map((subject) => (
-              <Link key={subject.id} href={`/challenges/${challengeType}/${subject.slug}`}>
+              <Link key={subject.id} href={`/challenges/${challengeType}/${subject.slug}/`}>
                 <Card className="group flex h-full items-center justify-between p-6 transition-all hover:bg-card/90 hover:shadow-lg">
                   <div className="flex items-center gap-4">
                     <subject.icon className="h-10 w-10 text-primary" />

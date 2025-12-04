@@ -105,14 +105,14 @@ export default function ChapterPage() {
                     </div>
                     <div className="flex items-center justify-start sm:justify-end gap-2">
                        {lastAttempt && (
-                        <Link href={`/quiz/${set.id}/results?score=${lastAttempt.score}&total=${set.questions.length}&time=${lastAttempt.timeTaken}&answers=${encodeURIComponent(JSON.stringify(lastAttempt.userAnswers))}`} passHref>
+                        <Link href={`/quiz/${set.id}/results/?score=${lastAttempt.score}&total=${set.questions.length}&time=${lastAttempt.timeTaken}&answers=${encodeURIComponent(JSON.stringify(lastAttempt.userAnswers))}`} passHref>
                             <Button size="lg" variant="outline">
                                 <BookOpen className="mr-2 h-5 w-5" />
                                 View Solutions
                             </Button>
                         </Link>
                        )}
-                      <Link href={`/quiz/${set.id}`} passHref>
+                      <Link href={`/quiz/${set.id}/`} passHref>
                         <Button size="lg" className="w-full sm:w-auto">
                           <Play className="mr-2 h-5 w-5" />
                           {attempts > 0 ? 'Retry' : 'Play'}

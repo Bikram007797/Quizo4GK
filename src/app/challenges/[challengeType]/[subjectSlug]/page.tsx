@@ -31,7 +31,7 @@ export default function SubjectPage({ params }: SubjectPageProps) {
           <h2 className="mb-6 text-2xl font-bold tracking-tight font-headline">Select a Chapter</h2>
           <div className="grid gap-4">
             {chapters.map(chapter => (
-              <Link key={chapter.id} href={`/challenges/${challengeType}/${subject.slug}/${chapter.slug}`}>
+              <Link key={chapter.id} href={`/challenges/${challengeType}/${subject.slug}/${chapter.slug}/`}>
                 <Card className="group transition-all hover:bg-card/90 hover:shadow-lg">
                   <CardHeader>
                     <CardTitle className="font-headline">{chapter.title}</CardTitle>

@@ -157,7 +157,7 @@ export function QuizResults({
 
           <div className="flex flex-col sm:flex-row gap-4">
             <Button asChild className="flex-1">
-              <Link href={`/quiz/${quizSet.id}`}>Retry Quiz</Link>
+              <Link href={`/quiz/${quizSet.id}/`}>Retry Quiz</Link>
             </Button>
             <Button asChild variant="outline" className="flex-1">
               <Link href="/">Back to Home</Link>

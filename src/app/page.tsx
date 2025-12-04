@@ -16,35 +16,35 @@ import { DEVELOPER_CREDIT } from '@/lib/constants';
 
 const menuItems = [
   {
-    href: '/challenges/daily',
+    href: '/challenges/daily/',
     title: 'Daily Challenge',
     description: 'Test your skills with new daily quizzes.',
     icon: Calendar,
     color: 'text-blue-500',
   },
   {
-    href: '/challenges/weekly',
+    href: '/challenges/weekly/',
     title: 'Weekly Challenge',
     description: 'Take on tougher weekly quiz sets.',
     icon: CalendarDays,
     color: 'text-purple-500',
   },
   {
-    href: '/leaderboard',
+    href: '/leaderboard/',
     title: 'Leaderboard',
     description: 'See how you rank against others.',
     icon: Trophy,
     color: 'text-yellow-500',
   },
   {
-    href: '/bookmarks',
+    href: '/bookmarks/',
     title: 'Bookmarks',
     description: 'Review your saved questions.',
     icon: BookMarked,
     color: 'text-orange-500',
   },
   {
-    href: '/profile',
+    href: '/profile/',
     title: 'Profile & Rewards',
     description: 'Check your progress and achievements.',
     icon: User,
@@ -61,7 +61,7 @@ export default function Home() {
     // If auth state is not loading and user is not logged in (or is anonymous),
     // redirect to the login page.
     if (!isUserLoading && (!user || user.isAnonymous)) {
-      router.replace('/login');
+      router.replace('/login/');
     }
   }, [user, isUserLoading, router]);
 

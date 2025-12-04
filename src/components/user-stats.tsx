@@ -40,7 +40,7 @@ export function UserStats() {
   if (!user || user.isAnonymous) {
       return (
         <Button asChild>
-            <Link href="/login">
+            <Link href="/login/">
                 <LogIn className="mr-2 h-4 w-4"/>
                 Login / Sign Up
             </Link>

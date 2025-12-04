@@ -59,16 +59,16 @@ function LeaderboardTab({ period }: LeaderboardTabProps) {
         case 'daily': return user.stats.dailyPoints || 0;
         case 'weekly': return user.stats.weeklyPoints || 0;
         case 'monthly': return user.stats.monthlyPoints || 0;
-        default: return user.stats.points;
+        default: return user.stats.points || 0;
     }
   }
 
   const rankedUsers = useMemo(() => {
-    // First, filter out users who have 0 points for the current period.
-    const filteredUsers = users?.filter(user => getPointsForPeriod(user) > 0) ?? [];
+    // We want to show all users, even those with 0 points for the period.
+    const sortedUsers = users?.sort((a, b) => getPointsForPeriod(b) - getPointsForPeriod(a)) ?? [];
     
-    // Now that we have a filtered list, map them to add ranks.
-    return filteredUsers.map((user, index) => ({ ...user, rank: index + 1 }));
+    // Now that we have a sorted list, map them to add ranks.
+    return sortedUsers.map((user, index) => ({ ...user, rank: index + 1 }));
   }, [users, period]);
   
 

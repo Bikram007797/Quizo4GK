@@ -13,6 +13,7 @@ export const LEVEL_THRESHOLDS = [
 export const INITIAL_USER_DATA: UserData = {
   id: '',
   username: 'Anonymous',
+  email: '',
   stats: {
     points: 0,
     dailyPoints: 0,

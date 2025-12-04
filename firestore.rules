@@ -89,14 +89,13 @@ service cloud.firestore {
     /**
      * @description Manages user profile data.
      * @path /users/{userId}
-     * @allow (get) Any signed in user can read basic profile info.
-     * @allow (list) Any signed in user can list users for the leaderboard.
-     * @allow (create) An authenticated user can create their own profile document.
-     * @principle A user has exclusive write control over their own root document.
+     * @allow (list) Any signed-in user can query the users collection for the leaderboard.
+     * @allow (get) Any signed-in user can read another user's basic profile info.
+     * @allow (create, update, delete) A user has exclusive write control over their own root document.
      */
     match /users/{userId} {
+      allow list: if isSignedIn();
       allow get: if isSignedIn();
-      allow list: if isSignedIn(); // Allows querying for leaderboard.
       allow create: if isNewOwner(userId) && request.resource.data.id == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);

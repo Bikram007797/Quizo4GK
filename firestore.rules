@@ -1,0 +1,258 @@
+/**
+ * Core Philosophy: This ruleset establishes a clear boundary between public, read-only
+ * quiz content and private, user-specific data. All quiz materials (subjects,
+ * chapters, questions, badges) are publicly accessible to any client, but cannot be
+ * modified. All user-specific data (profiles, attempts, bookmarks) is strictly
+ * confined to the authenticated user who owns it.
+ *
+ * Data Structure: The data is organized into two main categories:
+ * 1. Top-Level Public Collections: /subjects, /chapters, /questions, and /badges store the
+ *    global quiz content. This data is intended to be read-only for all app users.
+ * 2. User-Owned Data Tree: All private user data is nested under /users/{userId}. This
+ *    includes the user's profile, their quiz attempts, bookmarks, and earned badges.
+ *    This structure allows for simple, performant, and secure path-based authorization.
+ *
+ * Key Security Decisions:
+ * - Strict Ownership: A user can only access data under their own /users/{userId} path.
+ * - No User Listing: Listing the /users collection is explicitly disallowed to protect user privacy.
+ * - Public Content is Read-Only: All top-level content collections are immutable from the client-side
+ *   to prevent unauthorized modification of quiz data. Writes to these collections would
+ *   be handled by a trusted server-side process (e.g., Admin SDK).
+ * - Denormalization for Authorization: User-specific subcollections like 'quizSetAttempts' contain a
+ *   'userId' field. The rules validate on creation that this field matches the user's path,
+ *   enforcing relational integrity without costly 'get' calls.
+ * - Structural Segregation: Private user data (e.g., bookmarks) is kept in a user subcollection,
+ *   while public data (e.g., questions) is in a separate top-level collection. This prevents
+ *   insecure queries and simplifies rule logic.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --------------------------------
+    // Helper Functions
+    // --------------------------------
+
+    /**
+     * Checks if a user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the currently authenticated user's UID matches the provided userId.
+     * This is the fundamental check for document ownership.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * For CREATE operations on a user's root document.
+     * Ensures the user creating the document is the owner.
+     */
+    function isNewOwner(userId) {
+      return isOwner(userId);
+    }
+    
+    /**
+     * For UPDATE and DELETE operations.
+     * Ensures the user is the owner and the document already exists.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * For CREATE operations on a user's subcollection documents.
+     * Validates that the 'userId' field inside the new document's data
+     * correctly links back to the owner's path.
+     */
+    function hasCorrectUserIdOnCreate(userId) {
+      return request.resource.data.userId == userId;
+    }
+    
+    /**
+     * For UPDATE operations on a user's subcollection documents.
+     * Ensures the 'userId' field cannot be changed after creation.
+     */
+    function isUserIdImmutable() {
+      return request.resource.data.userId == resource.data.userId;
+    }
+    
+    // --------------------------------
+    // User Data Collections
+    // --------------------------------
+
+    /**
+     * @description Manages user profile data.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user can create their own profile document.
+     * @deny (list) No user can list all other users in the database.
+     * @principle A user has exclusive control over their own root document. Listing is disabled for privacy.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isNewOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description User's quiz attempt history.
+       * @path /users/{userId}/quizSetAttempts/{quizSetAttemptId}
+       * @allow (create) An authenticated user can create a quiz attempt under their own profile.
+       * @deny (get) A user cannot read another user's quiz attempts.
+       * @principle Enforces path-based ownership for all reads and writes.
+       */
+      match /quizSetAttempts/{quizSetAttemptId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && hasCorrectUserIdOnCreate(userId);
+        allow update: if isExistingOwner(userId) && isUserIdImmutable();
+        allow delete: if isExistingOwner(userId);
+
+        /**
+         * @description A user's answers to specific questions within an attempt.
+         * @path /users/{userId}/quizSetAttempts/{quizSetAttemptId}/questionAttempts/{questionAttemptId}
+         * @allow (create) An authenticated user can create question attempts as part of their quiz attempt.
+         * @deny (get) An authenticated user cannot read another user's specific answers.
+         * @principle Inherits ownership from the parent user document.
+         */
+        match /questionAttempts/{questionAttemptId} {
+          allow get: if isOwner(userId);
+          allow list: if isOwner(userId);
+          allow create: if isOwner(userId) && request.resource.data.userQuizSetAttemptId == quizSetAttemptId;
+          allow update: if isExistingOwner(userId) && request.resource.data.userQuizSetAttemptId == resource.data.userQuizSetAttemptId;
+          allow delete: if isExistingOwner(userId);
+        }
+      }
+
+      /**
+       * @description Manages a user's bookmarked questions.
+       * @path /users/{userId}/bookmarks/{bookmarkId}
+       * @allow (create) A user can create a bookmark for themselves.
+       * @deny (delete) A user cannot delete another user's bookmarks.
+       * @principle Enforces path-based ownership for all reads and writes.
+       */
+      match /bookmarks/{bookmarkId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && hasCorrectUserIdOnCreate(userId);
+        allow update: if isExistingOwner(userId) && isUserIdImmutable();
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Manages badges a user has earned.
+       * @path /users/{userId}/userBadges/{userBadgeId}
+       * @allow (list) A user can list the badges they have earned.
+       * @deny (get) A user cannot read another user's earned badge records.
+       * @principle Enforces path-based ownership for all reads and writes.
+       */
+      match /userBadges/{userBadgeId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && hasCorrectUserIdOnCreate(userId);
+        allow update: if isExistingOwner(userId) && isUserIdImmutable();
+        allow delete: if isExistingOwner(userId);
+      }
+    }
+    
+    // --------------------------------
+    // Public Content Collections
+    // --------------------------------
+
+    /**
+     * @description Stores quiz subjects, which are public and read-only.
+     * @path /subjects/{subjectId}
+     * @allow (get, list) Any user, including unauthenticated ones, can read subjects.
+     * @deny (create, update, delete) No user can modify subjects from the client.
+     * @principle Segregates public, read-only content from user data.
+     */
+    match /subjects/{subjectId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+
+      /**
+       * @description Stores chapters within a subject, which are public and read-only.
+       * @path /subjects/{subjectId}/chapters/{chapterId}
+       * @allow (get, list) Any user can read chapters.
+       * @deny (create) No user can create new chapters from the client.
+       * @principle Data is public and immutable from the client-side.
+       */
+      match /chapters/{chapterId} {
+        allow get: if true;
+        allow list: if true;
+        allow create: if false;
+        allow update: if false;
+        allow delete: if false;
+      }
+    }
+
+    /**
+     * @description Stores quiz chapters, which are public and read-only.
+     * NOTE: This top-level path is defined based on the IR structure for quizSets.
+     * @path /chapters/{chapterId}
+     * @allow (get, list) Any user, including unauthenticated ones, can read chapters.
+     * @deny (create, update, delete) No user can modify chapters from the client.
+     * @principle Segregates public, read-only content from user data.
+     */
+    match /chapters/{chapterId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+
+      /**
+       * @description Stores quiz sets within a chapter, which are public and read-only.
+       * @path /chapters/{chapterId}/quizSets/{quizSetId}
+       * @allow (get, list) Any user can read quiz sets.
+       * @deny (create) No user can create new quiz sets from the client.
+       * @principle Data is public and immutable from the client-side.
+       */
+      match /quizSets/{quizSetId} {
+        allow get: if true;
+        allow list: if true;
+        allow create: if false;
+        allow update: if false;
+        allow delete: if false;
+      }
+    }
+
+    /**
+     * @description Stores all quiz questions, which are public and read-only.
+     * @path /questions/{questionId}
+     * @allow (get, list) Any user can read questions to participate in quizzes.
+     * @deny (create, update, delete) Questions are managed server-side and are immutable to clients.
+     * @principle Segregates public, read-only content from user data.
+     */
+    match /questions/{questionId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Stores all available badges, which are public and read-only.
+     * @path /badges/{badgeId}
+     * @allow (get, list) Any user can view all possible badges.
+     * @deny (create, update, delete) Badges are managed server-side and are immutable to clients.
+     * @principle Segregates public, read-only content from user data.
+     */
+    match /badges/{badgeId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}

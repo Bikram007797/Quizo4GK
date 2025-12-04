@@ -1,0 +1,581 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the QUIZO app.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user entity."
+        },
+        "username": {
+          "type": "string",
+          "description": "The user's username."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "level": {
+          "type": "number",
+          "description": "The user's current level in the app."
+        },
+        "xp": {
+          "type": "number",
+          "description": "The user's total experience points."
+        },
+        "coins": {
+          "type": "number",
+          "description": "The number of coins the user has."
+        },
+        "points": {
+          "type": "number",
+          "description": "The user's total points."
+        },
+        "dailyChallengeCompletionDates": {
+          "type": "array",
+          "description": "Array of dates when user completed the daily challenge.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "weeklyChallengeCompletionDates": {
+          "type": "array",
+          "description": "Array of dates when user completed the weekly challenge.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "username"
+      ]
+    },
+    "Subject": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Subject",
+      "type": "object",
+      "description": "Represents a subject in the quiz app (e.g., Geography, Polity).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the subject."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the subject (e.g., Geography, Polity)."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the subject."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "Chapter": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Chapter",
+      "type": "object",
+      "description": "Represents a chapter within a subject.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the chapter."
+        },
+        "subjectId": {
+          "type": "string",
+          "description": "Reference to Subject. (Relationship: Subject 1:N Chapter)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the chapter."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the chapter."
+        }
+      },
+      "required": [
+        "id",
+        "subjectId",
+        "name"
+      ]
+    },
+    "QuizSet": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "QuizSet",
+      "type": "object",
+      "description": "Represents a set of quiz questions.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the quiz set."
+        },
+        "chapterId": {
+          "type": "string",
+          "description": "Reference to Chapter. (Relationship: Chapter 1:N QuizSet)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the quiz set."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the quiz set."
+        },
+        "questionIds": {
+          "type": "array",
+          "description": "References to Questions. (Relationship: QuizSet 1:N Question)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "chapterId",
+        "name"
+      ]
+    },
+    "Question": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Question",
+      "type": "object",
+      "description": "Represents a single quiz question.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the question."
+        },
+        "questionText": {
+          "type": "string",
+          "description": "The text of the question."
+        },
+        "options": {
+          "type": "array",
+          "description": "The multiple choice options for the question.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "correctAnswerIndex": {
+          "type": "number",
+          "description": "The index of the correct answer in the options array."
+        },
+        "explanation": {
+          "type": "string",
+          "description": "Explanation for the correct answer."
+        }
+      },
+      "required": [
+        "id",
+        "questionText",
+        "options",
+        "correctAnswerIndex"
+      ]
+    },
+    "UserQuizSetAttempt": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserQuizSetAttempt",
+      "type": "object",
+      "description": "Represents a user's attempt at a quiz set.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user quiz set attempt."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N UserQuizSetAttempt)"
+        },
+        "quizSetId": {
+          "type": "string",
+          "description": "Reference to QuizSet. (Relationship: QuizSet 1:N UserQuizSetAttempt)"
+        },
+        "attemptTime": {
+          "type": "string",
+          "description": "The date and time the quiz set was attempted.",
+          "format": "date-time"
+        },
+        "score": {
+          "type": "number",
+          "description": "The user's score on the quiz set."
+        },
+        "timeTaken": {
+          "type": "number",
+          "description": "The time taken to complete the quiz set (in seconds)."
+        },
+        "correctAnswers": {
+          "type": "number",
+          "description": "The number of correct answers given by the user."
+        },
+        "incorrectAnswers": {
+          "type": "number",
+          "description": "The number of incorrect answers given by the user."
+        },
+        "accuracy": {
+          "type": "number",
+          "description": "The accuracy percentage of the user's answers."
+        },
+        "coinsEarned": {
+          "type": "number",
+          "description": "The number of coins earned for this attempt."
+        },
+        "xpEarned": {
+          "type": "number",
+          "description": "The amount of XP earned for this attempt."
+        },
+        "pointsEarned": {
+          "type": "number",
+          "description": "The number of points earned for this attempt."
+        },
+        "questionAttempts": {
+          "type": "array",
+          "description": "References to UserQuestionAttempts. (Relationship: UserQuizSetAttempt 1:N UserQuestionAttempt)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "quizSetId",
+        "attemptTime"
+      ]
+    },
+    "UserQuestionAttempt": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserQuestionAttempt",
+      "type": "object",
+      "description": "Represents a user's attempt at a specific question within a quiz set attempt.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user question attempt."
+        },
+        "userQuizSetAttemptId": {
+          "type": "string",
+          "description": "Reference to UserQuizSetAttempt. (Relationship: UserQuizSetAttempt 1:N UserQuestionAttempt)"
+        },
+        "questionId": {
+          "type": "string",
+          "description": "Reference to Question. (Relationship: Question 1:N UserQuestionAttempt)"
+        },
+        "selectedAnswerIndex": {
+          "type": "number",
+          "description": "The index of the answer selected by the user (or null if no answer was selected)."
+        },
+        "isCorrect": {
+          "type": "boolean",
+          "description": "Indicates whether the user's answer was correct."
+        },
+        "timeTaken": {
+          "type": "number",
+          "description": "The time taken to answer the question (in seconds)."
+        }
+      },
+      "required": [
+        "id",
+        "userQuizSetAttemptId",
+        "questionId",
+        "isCorrect"
+      ]
+    },
+    "Bookmark": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Bookmark",
+      "type": "object",
+      "description": "Represents a bookmarked question by a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the bookmark."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Bookmark)"
+        },
+        "questionId": {
+          "type": "string",
+          "description": "Reference to Question. (Relationship: Question 1:N Bookmark)"
+        },
+        "bookmarkTime": {
+          "type": "string",
+          "description": "The date and time the question was bookmarked.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "questionId"
+      ]
+    },
+    "Badge": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Badge",
+      "type": "object",
+      "description": "Represents a badge or achievement that a user can earn.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the badge."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the badge."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the badge."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL of the badge image.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "UserBadge": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserBadge",
+      "type": "object",
+      "description": "Represents a badge earned by a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user badge."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N UserBadge)"
+        },
+        "badgeId": {
+          "type": "string",
+          "description": "Reference to Badge. (Relationship: Badge 1:N UserBadge)"
+        },
+        "earnedDate": {
+          "type": "string",
+          "description": "The date the badge was earned.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "badgeId"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profile information. Path-based ownership ensures only the user can access their data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/subjects/{subjectId}",
+        "definition": {
+          "entityName": "Subject",
+          "schema": {
+            "$ref": "#/backend/entities/Subject"
+          },
+          "description": "Stores subjects (e.g., Geography, Polity).",
+          "params": [
+            {
+              "name": "subjectId",
+              "description": "The unique identifier for the subject."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/subjects/{subjectId}/chapters/{chapterId}",
+        "definition": {
+          "entityName": "Chapter",
+          "schema": {
+            "$ref": "#/backend/entities/Chapter"
+          },
+          "description": "Stores chapters within a subject. Denormalizes `subjectId` for authorization.",
+          "params": [
+            {
+              "name": "subjectId",
+              "description": "The unique identifier for the subject."
+            },
+            {
+              "name": "chapterId",
+              "description": "The unique identifier for the chapter."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/chapters/{chapterId}/quizSets/{quizSetId}",
+        "definition": {
+          "entityName": "QuizSet",
+          "schema": {
+            "$ref": "#/backend/entities/QuizSet"
+          },
+          "description": "Stores quiz sets within a chapter. Denormalizes `chapterId` for authorization.",
+          "params": [
+            {
+              "name": "chapterId",
+              "description": "The unique identifier for the chapter."
+            },
+            {
+              "name": "quizSetId",
+              "description": "The unique identifier for the quiz set."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/questions/{questionId}",
+        "definition": {
+          "entityName": "Question",
+          "schema": {
+            "$ref": "#/backend/entities/Question"
+          },
+          "description": "Stores quiz questions.",
+          "params": [
+            {
+              "name": "questionId",
+              "description": "The unique identifier for the question."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/quizSetAttempts/{quizSetAttemptId}",
+        "definition": {
+          "entityName": "UserQuizSetAttempt",
+          "schema": {
+            "$ref": "#/backend/entities/UserQuizSetAttempt"
+          },
+          "description": "Stores user attempts at quiz sets. Path-based ownership enforced through `userId`.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "quizSetAttemptId",
+              "description": "The unique identifier for the quiz set attempt."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/quizSetAttempts/{quizSetAttemptId}/questionAttempts/{questionAttemptId}",
+        "definition": {
+          "entityName": "UserQuestionAttempt",
+          "schema": {
+            "$ref": "#/backend/entities/UserQuestionAttempt"
+          },
+          "description": "Stores user attempts at specific questions within a quiz set attempt. Path-based ownership enforced through `userId` and `quizSetAttemptId`.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "quizSetAttemptId",
+              "description": "The unique identifier for the quiz set attempt."
+            },
+            {
+              "name": "questionAttemptId",
+              "description": "The unique identifier for the question attempt."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/bookmarks/{bookmarkId}",
+        "definition": {
+          "entityName": "Bookmark",
+          "schema": {
+            "$ref": "#/backend/entities/Bookmark"
+          },
+          "description": "Stores bookmarked questions for a user. Path-based ownership enforced through `userId`.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "bookmarkId",
+              "description": "The unique identifier for the bookmark."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/badges/{badgeId}",
+        "definition": {
+          "entityName": "Badge",
+          "schema": {
+            "$ref": "#/backend/entities/Badge"
+          },
+          "description": "Stores badge information.",
+          "params": [
+            {
+              "name": "badgeId",
+              "description": "The unique identifier for the badge."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/userBadges/{userBadgeId}",
+        "definition": {
+          "entityName": "UserBadge",
+          "schema": {
+            "$ref": "#/backend/entities/UserBadge"
+          },
+          "description": "Stores badges earned by a user. Path-based ownership enforced through `userId`.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "userBadgeId",
+              "description": "The unique identifier for the user badge."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support the QUIZO app's core features, gamification elements, and user experience goals while adhering to the principles of Authorization Independence, Structural Segregation, and Data Clarity. User data is stored under `/users/{userId}` using path-based ownership, ensuring easy security rule definition.  Subjects, Chapters, QuizSets, and Questions are stored in top-level collections to allow for easy querying and management, independent of user context. User-specific quiz attempts, bookmarks, and badges are stored under the user's document using path-based ownership to establish a clear parent-child relationship. To ensure authorization independence, fields such as `userId` and `quizSetId` are denormalized into subcollections where appropriate. This approach avoids complex `get()` calls in security rules and enables atomic operations. Segregation is achieved by placing user-specific data (attempts, bookmarks, badges) under `/users/{userId}`, while global content (Subjects, Chapters, Questions) resides in top-level collections.\n\nThis structure supports the required QAPs (Rules are not Filters) by leveraging structural segregation and path-based ownership.  Listing attempts, bookmarks or badges for a specific user can be done securely using the `/users/{userId}/{collection}` structure. Global content (questions, subjects, etc) can be listed without user context, since access isn't restricted."
+  }
+}

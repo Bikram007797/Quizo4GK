@@ -8,32 +8,38 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the user entity."
+          "description": "Unique identifier for the user entity, matches Firebase Auth UID."
         },
         "username": {
           "type": "string",
-          "description": "The user's username."
+          "description": "The user's public display name."
         },
         "email": {
           "type": "string",
           "description": "The user's email address.",
           "format": "email"
         },
-        "level": {
-          "type": "number",
-          "description": "The user's current level in the app."
-        },
-        "xp": {
-          "type": "number",
-          "description": "The user's total experience points."
-        },
-        "coins": {
-          "type": "number",
-          "description": "The number of coins the user has."
-        },
-        "points": {
-          "type": "number",
-          "description": "The user's total points."
+        "stats": {
+          "type": "object",
+          "description": "Gamification stats for the user.",
+          "properties": {
+            "level": {
+              "type": "number",
+              "description": "The user's current level in the app."
+            },
+            "xp": {
+              "type": "number",
+              "description": "The user's total experience points."
+            },
+            "coins": {
+              "type": "number",
+              "description": "The number of coins the user has."
+            },
+            "points": {
+              "type": "number",
+              "description": "The user's total points, used for leaderboard ranking."
+            }
+          }
         },
         "dailyChallengeCompletionDates": {
           "type": "array",
@@ -52,7 +58,8 @@
       },
       "required": [
         "id",
-        "username"
+        "username",
+        "stats"
       ]
     },
     "Subject": {
@@ -394,7 +401,7 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user profile information. Path-based ownership ensures only the user can access their data.",
+          "description": "Stores user profile information, including public data for leaderboards and private data owned by the user.",
           "params": [
             {
               "name": "userId",
@@ -576,6 +583,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support the QUIZO app's core features, gamification elements, and user experience goals while adhering to the principles of Authorization Independence, Structural Segregation, and Data Clarity. User data is stored under `/users/{userId}` using path-based ownership, ensuring easy security rule definition.  Subjects, Chapters, QuizSets, and Questions are stored in top-level collections to allow for easy querying and management, independent of user context. User-specific quiz attempts, bookmarks, and badges are stored under the user's document using path-based ownership to establish a clear parent-child relationship. To ensure authorization independence, fields such as `userId` and `quizSetId` are denormalized into subcollections where appropriate. This approach avoids complex `get()` calls in security rules and enables atomic operations. Segregation is achieved by placing user-specific data (attempts, bookmarks, badges) under `/users/{userId}`, while global content (Subjects, Chapters, Questions) resides in top-level collections.\n\nThis structure supports the required QAPs (Rules are not Filters) by leveraging structural segregation and path-based ownership.  Listing attempts, bookmarks or badges for a specific user can be done securely using the `/users/{userId}/{collection}` structure. Global content (questions, subjects, etc) can be listed without user context, since access isn't restricted."
+    "reasoning": "The Firestore data structure is designed to support the QUIZO app's core features, gamification elements, and user experience goals while adhering to the principles of Authorization Independence, Structural Segregation, and Data Clarity. User data is stored under `/users/{userId}` using path-based ownership, ensuring easy security rule definition. The user document itself contains public-facing data like username and stats for leaderboards.  Subjects, Chapters, QuizSets, and Questions are stored in top-level collections to allow for easy querying and management, independent of user context. User-specific quiz attempts, bookmarks, and badges are stored under the user's document using path-based ownership to establish a clear parent-child relationship. To ensure authorization independence, fields such as `userId` and `quizSetId` are denormalized into subcollections where appropriate. This approach avoids complex `get()` calls in security rules and enables atomic operations. Segregation is achieved by placing user-specific data (attempts, bookmarks, badges) under `/users/{userId}`, while global content (Subjects, Chapters, Questions) resides in top-level collections.\n\nThis structure supports the required QAPs (Rules are not Filters) by leveraging structural segregation and path-based ownership.  Listing attempts, bookmarks or badges for a specific user can be done securely using the `/users/{userId}/{collection}` structure. Global content (questions, subjects, etc) can be listed without user context, since access isn't restricted. The main user collection can be queried by any authenticated user to build leaderboards."
   }
 }

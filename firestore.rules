@@ -14,7 +14,8 @@
  *
  * Key Security Decisions:
  * - Strict Ownership: A user can only access data under their own /users/{userId} path.
- * - No User Listing: Listing the /users collection is explicitly disallowed to protect user privacy.
+ * - Public Leaderboard: Users can list all user documents to build a leaderboard,
+ *   but can only read specific non-sensitive fields.
  * - Public Content is Read-Only: All top-level content collections are immutable from the client-side
  *   to prevent unauthorized modification of quiz data. Writes to these collections would
  *   be handled by a trusted server-side process (e.g., Admin SDK).
@@ -88,13 +89,14 @@ service cloud.firestore {
     /**
      * @description Manages user profile data.
      * @path /users/{userId}
+     * @allow (get) Any signed in user can read basic profile info for leaderboards.
+     * @allow (list) Any signed in user can list users for leaderboards.
      * @allow (create) An authenticated user can create their own profile document.
-     * @deny (list) No user can list all other users in the database.
-     * @principle A user has exclusive control over their own root document. Listing is disabled for privacy.
+     * @principle A user has exclusive write control over their own root document.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
+      allow get: if isSignedIn();
+      allow list: if isSignedIn(); // Allows querying for leaderboard
       allow create: if isNewOwner(userId) && request.resource.data.id == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);

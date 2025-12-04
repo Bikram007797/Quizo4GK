@@ -11,6 +11,8 @@ export const LEVEL_THRESHOLDS = [
 ];
 
 export const INITIAL_USER_DATA: UserData = {
+  id: '',
+  username: 'Anonymous',
   stats: {
     points: 0,
     coins: 0,

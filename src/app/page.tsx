@@ -3,7 +3,7 @@ import { AppHeader } from '@/components/app-header';
 import { UserStats } from '@/components/user-stats';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, BookMarked, User, Calendar, CalendarDays } from 'lucide-react';
+import { ArrowRight, BookMarked, User, Calendar, CalendarDays, Trophy } from 'lucide-react';
 import { APP_NAME, DEVELOPER_CREDIT } from '@/lib/constants';
 
 const menuItems = [
@@ -22,11 +22,18 @@ const menuItems = [
     color: 'text-purple-500',
   },
   {
+    href: '/leaderboard',
+    title: 'Leaderboard',
+    description: 'See how you rank against others.',
+    icon: Trophy,
+    color: 'text-yellow-500',
+  },
+  {
     href: '/bookmarks',
     title: 'Bookmarks',
     description: 'Review your saved questions.',
     icon: BookMarked,
-    color: 'text-yellow-500',
+    color: 'text-orange-500',
   },
   {
     href: '/profile',
@@ -54,7 +61,7 @@ export default function Home() {
       />
       <main className="flex-1">
         <div className="container py-8 px-4 md:px-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {menuItems.map((item) => (
               <Card
                 key={item.href}

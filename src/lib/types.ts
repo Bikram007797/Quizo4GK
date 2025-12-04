@@ -49,6 +49,9 @@ export type Attempt = {
 };
 
 export type UserData = {
+  id: string;
+  username: string;
+  email?: string;
   stats: UserStats;
   attempts: { [quizSetId: string]: Attempt[] };
   bookmarks: string[]; // array of question IDs

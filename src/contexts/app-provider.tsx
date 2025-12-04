@@ -64,6 +64,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Basic merge: combine stats, take longer array for bookmarks/completedSets
       const newStats: UserStats = {
         points: cloudData.stats.points + anonData.stats.points,
+        dailyPoints: (cloudData.stats.dailyPoints || 0) + (anonData.stats.dailyPoints || 0),
+        weeklyPoints: (cloudData.stats.weeklyPoints || 0) + (anonData.stats.weeklyPoints || 0),
+        monthlyPoints: (cloudData.stats.monthlyPoints || 0) + (anonData.stats.monthlyPoints || 0),
         coins: cloudData.stats.coins + anonData.stats.coins,
         xp: cloudData.stats.xp + anonData.stats.xp,
         level: 1, // Recalculate level below
@@ -190,6 +193,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
             level: prev.stats.level,
             xp: (prev.stats.xp || 0) + (updates.xp || 0),
             points: (prev.stats.points || 0) + (updates.points || 0),
+            dailyPoints: ((prev.stats.dailyPoints || 0) + (updates.points || 0)),
+            weeklyPoints: ((prev.stats.weeklyPoints || 0) + (updates.points || 0)),
+            monthlyPoints: ((prev.stats.monthlyPoints || 0) + (updates.points || 0)),
             coins: (prev.stats.coins || 0) + (updates.coins || 0),
         };
 

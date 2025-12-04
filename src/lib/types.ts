@@ -34,6 +34,9 @@ export type ChallengeType = 'daily' | 'weekly';
 
 export type UserStats = {
   points: number;
+  dailyPoints?: number;
+  weeklyPoints?: number;
+  monthlyPoints?: number;
   coins: number;
   xp: number;
   level: number;

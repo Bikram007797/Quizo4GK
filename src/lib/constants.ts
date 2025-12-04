@@ -15,6 +15,9 @@ export const INITIAL_USER_DATA: UserData = {
   username: 'Anonymous',
   stats: {
     points: 0,
+    dailyPoints: 0,
+    weeklyPoints: 0,
+    monthlyPoints: 0,
     coins: 0,
     xp: 0,
     level: 1,

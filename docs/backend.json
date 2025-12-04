@@ -38,6 +38,18 @@
             "points": {
               "type": "number",
               "description": "The user's total points, used for leaderboard ranking."
+            },
+            "dailyPoints": {
+              "type": "number",
+              "description": "The user's points for the current day."
+            },
+            "weeklyPoints": {
+              "type": "number",
+              "description": "The user's points for the current week."
+            },
+            "monthlyPoints": {
+              "type": "number",
+              "description": "The user's points for the current month."
             }
           }
         },

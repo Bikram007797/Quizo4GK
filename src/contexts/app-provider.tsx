@@ -68,7 +68,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         monthlyPoints: (cloudData.stats.monthlyPoints || 0) + (anonData.stats.monthlyPoints || 0),
         coins: cloudData.stats.coins + anonData.stats.coins,
         xp: cloudData.stats.xp + anonData.stats.xp,
-        level: 1,
+        level: cloudData.stats.level || 1,
       };
       
       const newBookmarks = [...new Set([...cloudData.bookmarks, ...anonData.bookmarks])];
@@ -94,88 +94,94 @@ export function AppProvider({ children }: { children: ReactNode }) {
       
       localStorage.removeItem('quizo_anonymous_data');
 
-      // Return the merged data to be set in state
-      return { ...cloudData, ...finalData } as UserData;
-
     } catch (error) {
       console.error("Error merging anonymous data:", error);
-      return null;
     }
   }, [firestore]);
 
 
   useEffect(() => {
     loadInitialTheme();
+  }, [loadInitialTheme]);
 
-    if (isUserLoading) {
-      setIsLoading(true);
-      return;
-    }
+  useEffect(() => {
+    const manageUserData = async () => {
+      if (isUserLoading) {
+        setIsLoading(true);
+        return;
+      }
 
-    if (firebaseUser) {
-      const userDocRef = doc(firestore, 'users', firebaseUser.uid);
-      setIsLoading(true);
-      
-      getDoc(userDocRef).then(async (userDocSnap) => {
-        let finalUserData: UserData | null = null;
-
-        if (userDocSnap.exists()) {
-          const loadedData = userDocSnap.data() as UserData;
-          
-          if (!firebaseUser.isAnonymous && localStorage.getItem('quizo_anonymous_data')) {
+      if (firebaseUser) {
+        setIsLoading(true);
+        const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+        
+        // Handle merging of anonymous data right after a real user logs in
+        if (!firebaseUser.isAnonymous && localStorage.getItem('quizo_anonymous_data')) {
             const anonData = loadAnonymousData();
-            const mergedData = await mergeAnonymousData(firebaseUser.uid, anonData);
-            // After merge, we need to refetch the data to have the absolute latest state
-            const freshSnap = await getDoc(userDocRef);
-            finalUserData = freshSnap.data() as UserData;
+            if (anonData.stats.points > 0 || anonData.bookmarks.length > 0) {
+              await mergeAnonymousData(firebaseUser.uid, anonData);
+            } else {
+              localStorage.removeItem('quizo_anonymous_data');
+            }
+        }
+        
+        try {
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+            setUserData(userDocSnap.data() as UserData);
           } else {
-            finalUserData = loadedData;
+            // This can happen if signup succeeds for auth but fails for firestore.
+            // Let's create the doc here as a fallback.
+            const initialData = { 
+              ...INITIAL_USER_DATA, 
+              id: firebaseUser.uid, 
+              username: firebaseUser.displayName || 'Anonymous',
+              email: firebaseUser.email || '',
+            };
+            await setDoc(userDocRef, initialData);
+            setUserData(initialData);
           }
+        } catch (error) {
+          console.error("Failed to load user data from Firestore", error);
+          setUserData(INITIAL_USER_DATA);
+        } finally {
+          setIsLoading(false);
+        }
+
+      } else {
+        // No user is logged in. Either sign in anonymously or load existing anonymous data.
+        const anonData = loadAnonymousData();
+        if (anonData && anonData.id) { // Check if there's existing anon data
+            setUserData(anonData);
+            setIsLoading(false);
         } else {
-           // This case is for a user who exists in Auth but not Firestore (e.g., failed signup)
-           // Or a new anonymous user. We set the document here.
-           const initialData = { ...INITIAL_USER_DATA, id: firebaseUser.uid, username: firebaseUser.displayName || 'Anonymous' };
-           await setDoc(userDocRef, initialData);
-           finalUserData = initialData;
+            signInAnonymously(auth).catch(err => {
+              console.error("Anonymous sign in failed:", err);
+              setIsLoading(false);
+            });
         }
+      }
+    };
 
-        if(finalUserData) {
-          setUserData(finalUserData);
-        }
-
-      }).catch(error => {
-        console.error("Failed to load user data from Firestore", error);
-        setUserData(INITIAL_USER_DATA);
-      }).finally(() => {
-        setIsLoading(false);
-      });
-
-    } else {
-      // No user at all, sign in anonymously.
-      signInAnonymously(auth).catch(err => {
-        console.error("Anonymous sign in failed:", err);
-        setIsLoading(false);
-      });
-    }
-  }, [firebaseUser, isUserLoading, firestore, auth, loadInitialTheme, loadAnonymousData, mergeAnonymousData]);
+    manageUserData();
+  }, [firebaseUser, isUserLoading, firestore, auth, loadAnonymousData, mergeAnonymousData]);
 
 
   useEffect(() => {
+    // This effect handles persisting data changes.
     if (isLoading || isUserLoading || !firebaseUser) return;
   
-    // Only save if the userData is not the initial template state
-    const isInitial = JSON.stringify(userData.stats) === JSON.stringify(INITIAL_USER_DATA.stats) && userData.bookmarks.length === 0 && userData.completedSets.length === 0;
+    // Avoid saving the initial blank data structure on first load
+    if (userData.id === '' || userData.id === INITIAL_USER_DATA.id) return;
   
-    if (!isInitial) {
-      if (firebaseUser.isAnonymous) {
-        saveAnonymousData(userData);
-      } else {
-        const userDocRef = doc(firestore, 'users', firebaseUser.uid);
-        // Use setDoc with merge to avoid overwriting data from other clients
-        setDoc(userDocRef, userData, { merge: true }).catch(error => {
-          console.error("Failed to save user data to Firestore", error);
-        });
-      }
+    if (firebaseUser.isAnonymous) {
+      saveAnonymousData(userData);
+    } else {
+      // For real users, save to Firestore.
+      const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+      setDoc(userDocRef, userData, { merge: true }).catch(error => {
+        console.error("Failed to save user data to Firestore", error);
+      });
     }
   }, [userData, firebaseUser, isUserLoading, isLoading, firestore, saveAnonymousData]);
 

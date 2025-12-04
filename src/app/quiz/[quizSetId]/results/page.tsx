@@ -21,14 +21,24 @@ function ResultsContent() {
     const score = searchParams.get('score');
     const total = searchParams.get('total');
     const time = searchParams.get('time');
+    const answersParam = searchParams.get('answers');
 
-    if (score === null || total === null || time === null) {
+    if (score === null || total === null || time === null || answersParam === null) {
       return (
         <div className="container py-8 px-4 md:px-6">
           <Skeleton className="h-[400px] w-full" />
         </div>
       );
     }
+    
+    let userAnswers: (number | null)[] = [];
+    try {
+        userAnswers = JSON.parse(decodeURIComponent(answersParam));
+    } catch(e) {
+        console.error("Failed to parse answers", e);
+        // Handle error or show a message
+    }
+
 
     return (
         <QuizResults
@@ -36,6 +46,7 @@ function ResultsContent() {
             score={parseInt(score)}
             totalQuestions={parseInt(total)}
             timeTaken={parseInt(time)}
+            userAnswers={userAnswers}
         />
     );
 }

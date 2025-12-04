@@ -61,17 +61,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   
   const updateStats = useCallback((updates: Partial<UserStats>) => {
     setUserData(prev => {
-      const newStats = { ...prev.stats, ...updates };
-      const currentLevel = newStats.level;
-      const newLevel = LEVEL_THRESHOLDS.filter(xp => newStats.xp >= xp).length;
-      
-      if (newLevel > currentLevel) {
-        newStats.level = newLevel;
-        toast({
-            title: "Level Up!",
-            description: `Congratulations, you've reached Level ${newLevel}!`,
-        });
-      }
+        const newStats: UserStats = {
+            level: prev.stats.level,
+            xp: prev.stats.xp + (updates.xp || 0),
+            points: prev.stats.points + (updates.points || 0),
+            coins: prev.stats.coins + (updates.coins || 0),
+        };
+
+        const currentLevel = newStats.level;
+        const newLevel = LEVEL_THRESHOLDS.findIndex(xp => newStats.xp < xp);
+
+        if (newLevel > currentLevel || (newLevel === -1 && currentLevel < LEVEL_THRESHOLDS.length)) {
+            const calculatedLevel = newLevel === -1 ? LEVEL_THRESHOLDS.length : newLevel;
+            if (calculatedLevel > currentLevel) {
+                newStats.level = calculatedLevel;
+                 toast({
+                    title: "Level Up!",
+                    description: `Congratulations, you've reached Level ${newStats.level}!`,
+                });
+            }
+        } else if (newLevel === 1 && currentLevel === 0) { // From 0 to 1
+             newStats.level = 1;
+             toast({
+                title: "Level Up!",
+                description: `Congratulations, you've reached Level ${newStats.level}!`,
+            });
+        }
       
       return { ...prev, stats: newStats };
     });
@@ -95,9 +110,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const newBookmarks = prev.bookmarks.includes(questionId)
         ? prev.bookmarks.filter(id => id !== questionId)
         : [...prev.bookmarks, questionId];
+      toast({
+        title: newBookmarks.includes(questionId) ? "Bookmarked!" : "Bookmark Removed",
+        description: newBookmarks.includes(questionId) 
+          ? "You can review this question later in your bookmarks." 
+          : "The question has been removed from your bookmarks.",
+      });
       return { ...prev, bookmarks: newBookmarks };
     });
-  }, []);
+  }, [toast]);
 
   const isBookmarked = useCallback((questionId: string) => {
     return userData.bookmarks.includes(questionId);

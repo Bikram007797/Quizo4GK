@@ -146,17 +146,17 @@ export function QuizView({ quizSet }: QuizViewProps) {
           className="space-y-4"
         >
           {currentQuestion.options.map((option, index) => (
-            <div
+            <Label
               key={index}
+              htmlFor={`option-${index}`}
               className={cn(
                 "flex items-center space-x-3 rounded-lg border p-4 transition-all cursor-pointer",
                 selectedOption === index ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'
               )}
-              onClick={() => handleOptionSelect(index)}
             >
               <RadioGroupItem value={index.toString()} id={`option-${index}`} />
-              <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer text-base">{option}</Label>
-            </div>
+              <span className="flex-1 cursor-pointer text-base">{option}</span>
+            </Label>
           ))}
         </RadioGroup>
       </CardContent>

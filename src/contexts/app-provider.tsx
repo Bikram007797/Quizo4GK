@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
@@ -6,7 +7,6 @@ import { INITIAL_USER_DATA, LEVEL_THRESHOLDS } from '@/lib/constants';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth, useFirestore, useUser } from '@/firebase';
 import { doc, setDoc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
-import { signInAnonymously } from 'firebase/auth';
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -57,58 +57,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       return;
     }
-
+  
     if (firebaseUser) {
-      // Real user is logged in, set up a real-time listener
       const userDocRef = doc(firestore, 'users', firebaseUser.uid);
       const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
         if (docSnap.exists()) {
           setUserData(docSnap.data() as UserData);
         } else {
-          // This can happen briefly during signup. The signup page now handles creation.
-          // We can set a default state here or wait. Let's set initial.
-          setUserData({ 
-            ...INITIAL_USER_DATA, 
-            id: firebaseUser.uid, 
+          // New user, data will be created on signup page.
+          // Set a default state until the doc is created to avoid errors.
+           const newUserData = {
+            ...INITIAL_USER_DATA,
+            id: firebaseUser.uid,
             username: firebaseUser.displayName || 'New User',
             email: firebaseUser.email || '',
-          });
+          };
+          setUserData(newUserData);
         }
         setIsLoading(false);
       }, (error) => {
         console.error("Error listening to user document:", error);
         setIsLoading(false);
       });
-
-      return () => unsubscribe(); // Cleanup listener on unmount or user change
-    
+  
+      return () => unsubscribe();
     } else {
-      // No user is logged in, handle anonymous user
-      let localData: UserData | null = null;
-      try {
-        const localDataString = localStorage.getItem('quizo_anonymous_data');
-        if (localDataString) {
-          localData = JSON.parse(localDataString);
-        }
-      } catch (e) { console.warn("Could not parse anonymous data") }
-
-      if (localData && localData.id) {
-        setUserData(localData);
-      } else {
-        const newAnonData = { ...INITIAL_USER_DATA, id: `anon_${Date.now()}`};
-        setUserData(newAnonData);
-        localStorage.setItem('quizo_anonymous_data', JSON.stringify(newAnonData));
-      }
+      // Handle anonymous user logic if needed, or just reset state
+      setUserData(INITIAL_USER_DATA);
       setIsLoading(false);
     }
   }, [firebaseUser, isUserLoading, firestore]);
-
-  // Persist anonymous data to localStorage whenever it changes
-  useEffect(() => {
-    if (!firebaseUser && !isUserLoading && userData.id.startsWith('anon_')) {
-      localStorage.setItem('quizo_anonymous_data', JSON.stringify(userData));
-    }
-  }, [userData, firebaseUser, isUserLoading]);
 
 
   const setTheme = (newTheme: AppTheme) => {
@@ -123,6 +101,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           xp: (prev.stats.xp || 0) + (updates.xp || 0),
           points: (prev.stats.points || 0) + (updates.points || 0),
           coins: (prev.stats.coins || 0) + (updates.coins || 0),
+          dailyPoints: (prev.stats.dailyPoints || 0) + (updates.points || 0),
+          weeklyPoints: (prev.stats.weeklyPoints || 0) + (updates.points || 0),
+          monthlyPoints: (prev.stats.monthlyPoints || 0) + (updates.points || 0),
         };
         const currentLevel = prev.stats.level || 1;
         const newLevel = LEVEL_THRESHOLDS.filter(xp => newStats.xp >= xp).length || 1;
@@ -137,10 +118,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     getDoc(userDocRef).then(docSnap => {
       if (docSnap.exists()) {
         const currentStats = docSnap.data().stats as UserStats;
+        const pointsUpdate = updates.points || 0;
+        
         const newStats: Partial<UserData['stats']> = {
           xp: (currentStats.xp || 0) + (updates.xp || 0),
-          points: (currentStats.points || 0) + (updates.points || 0),
+          points: (currentStats.points || 0) + pointsUpdate,
           coins: (currentStats.coins || 0) + (updates.coins || 0),
+          dailyPoints: (currentStats.dailyPoints || 0) + pointsUpdate,
+          weeklyPoints: (currentStats.weeklyPoints || 0) + pointsUpdate,
+          monthlyPoints: (currentStats.monthlyPoints || 0) + pointsUpdate,
         };
         
         const newLevel = LEVEL_THRESHOLDS.filter(xp => newStats.xp! >= xp).length || 1;

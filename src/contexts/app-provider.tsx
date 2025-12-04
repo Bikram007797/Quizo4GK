@@ -5,7 +5,7 @@ import type { AppContextType, AppTheme, UserData, Attempt, UserStats } from '@/l
 import { INITIAL_USER_DATA, LEVEL_THRESHOLDS } from '@/lib/constants';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth, useFirestore, useUser } from '@/firebase';
-import { doc, setDoc, getDoc, updateDoc, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { signInAnonymously } from 'firebase/auth';
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -57,11 +57,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
     try {
       const userDocSnap = await getDoc(userDocRef);
-      if (!userDocSnap.exists()) return; // Should not happen if signup creates doc
+      if (!userDocSnap.exists()) return;
       
       const cloudData = userDocSnap.data() as UserData;
 
-      // Basic merge: combine stats, take longer array for bookmarks/completedSets
       const newStats: UserStats = {
         points: cloudData.stats.points + anonData.stats.points,
         dailyPoints: (cloudData.stats.dailyPoints || 0) + (anonData.stats.dailyPoints || 0),
@@ -69,13 +68,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         monthlyPoints: (cloudData.stats.monthlyPoints || 0) + (anonData.stats.monthlyPoints || 0),
         coins: cloudData.stats.coins + anonData.stats.coins,
         xp: cloudData.stats.xp + anonData.stats.xp,
-        level: 1, // Recalculate level below
+        level: 1,
       };
       
       const newBookmarks = [...new Set([...cloudData.bookmarks, ...anonData.bookmarks])];
       const newCompletedSets = [...new Set([...cloudData.completedSets, ...anonData.completedSets])];
 
-      // Deep merge attempts
       const newAttempts = { ...cloudData.attempts };
       for (const quizSetId in anonData.attempts) {
         const existingAttempts = newAttempts[quizSetId] || [];
@@ -89,18 +87,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
         attempts: newAttempts,
       };
 
-      // Recalculate level
       const newLevel = LEVEL_THRESHOLDS.filter(xp => finalData.stats!.xp >= xp).length;
       finalData.stats!.level = Math.max(1, newLevel);
       
       await updateDoc(userDocRef, finalData);
-      setUserData(prev => ({ ...prev, ...finalData }));
-
-      // Clear anonymous data
+      
       localStorage.removeItem('quizo_anonymous_data');
+
+      // Return the merged data to be set in state
+      return { ...cloudData, ...finalData } as UserData;
 
     } catch (error) {
       console.error("Error merging anonymous data:", error);
+      return null;
     }
   }, [firestore]);
 
@@ -108,66 +107,77 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     loadInitialTheme();
 
-    if (!isUserLoading) {
-      if (firebaseUser) {
-        // User is logged in (named or anonymous)
-        const userDocRef = doc(firestore, 'users', firebaseUser.uid);
-        setIsLoading(true);
-        getDoc(userDocRef).then(userDocSnap => {
-          if (userDocSnap.exists()) {
-            const loadedData = userDocSnap.data() as UserData;
-            // If just signed in (not anon), check for local data to merge
-            if (!firebaseUser.isAnonymous && localStorage.getItem('quizo_anonymous_data')) {
-              const anonData = loadAnonymousData();
-              mergeAnonymousData(firebaseUser.uid, anonData).then(() => {
-                // After merge, reload data from server
-                 getDoc(userDocRef).then(snap => setUserData(snap.data() as UserData));
-              });
-            } else {
-              setUserData(loadedData);
-            }
-          } else {
-             // This case is for a user who exists in Auth but not Firestore (e.g., failed signup)
-             // Or a new anonymous user.
-             const initialData = { ...INITIAL_USER_DATA, id: firebaseUser.uid, username: firebaseUser.displayName || 'Anonymous' };
-             setDoc(userDocRef, initialData).then(() => setUserData(initialData));
-          }
-        }).catch(error => {
-          console.error("Failed to load user data from Firestore", error);
-        }).finally(() => {
-          setIsLoading(false);
-        });
+    if (isUserLoading) {
+      setIsLoading(true);
+      return;
+    }
 
-      } else {
-        // No user at all, sign in anonymously.
-        signInAnonymously(auth);
-      }
+    if (firebaseUser) {
+      const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+      setIsLoading(true);
+      
+      getDoc(userDocRef).then(async (userDocSnap) => {
+        let finalUserData: UserData | null = null;
+
+        if (userDocSnap.exists()) {
+          const loadedData = userDocSnap.data() as UserData;
+          
+          if (!firebaseUser.isAnonymous && localStorage.getItem('quizo_anonymous_data')) {
+            const anonData = loadAnonymousData();
+            const mergedData = await mergeAnonymousData(firebaseUser.uid, anonData);
+            // After merge, we need to refetch the data to have the absolute latest state
+            const freshSnap = await getDoc(userDocRef);
+            finalUserData = freshSnap.data() as UserData;
+          } else {
+            finalUserData = loadedData;
+          }
+        } else {
+           // This case is for a user who exists in Auth but not Firestore (e.g., failed signup)
+           // Or a new anonymous user. We set the document here.
+           const initialData = { ...INITIAL_USER_DATA, id: firebaseUser.uid, username: firebaseUser.displayName || 'Anonymous' };
+           await setDoc(userDocRef, initialData);
+           finalUserData = initialData;
+        }
+
+        if(finalUserData) {
+          setUserData(finalUserData);
+        }
+
+      }).catch(error => {
+        console.error("Failed to load user data from Firestore", error);
+        setUserData(INITIAL_USER_DATA);
+      }).finally(() => {
+        setIsLoading(false);
+      });
+
+    } else {
+      // No user at all, sign in anonymously.
+      signInAnonymously(auth).catch(err => {
+        console.error("Anonymous sign in failed:", err);
+        setIsLoading(false);
+      });
     }
   }, [firebaseUser, isUserLoading, firestore, auth, loadInitialTheme, loadAnonymousData, mergeAnonymousData]);
 
 
   useEffect(() => {
-    // This effect handles saving data
-    if (isLoading || isUserLoading) return;
-
-    if (firebaseUser) {
-        // Avoid writing initial data or unchanged data
-        const isInitialData = JSON.stringify(userData) === JSON.stringify({ ...INITIAL_USER_DATA, id: userData.id, username: userData.username });
-
-        if (!isInitialData) {
-            if (firebaseUser.isAnonymous) {
-                // Save to localStorage for anonymous users
-                saveAnonymousData(userData);
-            } else {
-                // Save to Firestore for logged-in users
-                const userDocRef = doc(firestore, 'users', firebaseUser.uid);
-                setDoc(userDocRef, userData, { merge: true }).catch(error => {
-                    console.error("Failed to save user data to Firestore", error);
-                });
-            }
-        }
+    if (isLoading || isUserLoading || !firebaseUser) return;
+  
+    // Only save if the userData is not the initial template state
+    const isInitial = JSON.stringify(userData.stats) === JSON.stringify(INITIAL_USER_DATA.stats) && userData.bookmarks.length === 0 && userData.completedSets.length === 0;
+  
+    if (!isInitial) {
+      if (firebaseUser.isAnonymous) {
+        saveAnonymousData(userData);
+      } else {
+        const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+        // Use setDoc with merge to avoid overwriting data from other clients
+        setDoc(userDocRef, userData, { merge: true }).catch(error => {
+          console.error("Failed to save user data to Firestore", error);
+        });
+      }
     }
-}, [userData, firebaseUser, isUserLoading, isLoading, firestore, saveAnonymousData]);
+  }, [userData, firebaseUser, isUserLoading, isLoading, firestore, saveAnonymousData]);
 
 
   useEffect(() => {
@@ -204,7 +214,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         };
 
         const currentLevel = prev.stats.level || 1;
-        // The level calculation now correctly finds the new level based on total XP.
         const newLevel = LEVEL_THRESHOLDS.filter(xp => newStats.xp >= xp).length || 1;
         
         if (newLevel > currentLevel) {
@@ -241,7 +250,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ? prev.bookmarks.filter(id => id !== questionId)
         : [...prev.bookmarks, questionId];
       
-      // Defer toast call to avoid state update during render
       setTimeout(() => {
         if (!isCurrentlyBookmarked) {
           toast({

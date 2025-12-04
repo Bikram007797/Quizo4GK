@@ -64,12 +64,8 @@ function LeaderboardTab({ period }: LeaderboardTabProps) {
   }
 
   const rankedUsers = useMemo(() => {
-    // Filter out users who have 0 points for the current period and are not anonymous.
-    const filteredUsers = users?.filter(user => {
-        const points = getPointsForPeriod(user);
-        // Show user if they have points, OR if they have a real username (not 'Anonymous')
-        return points > 0 || (user.username && user.username !== 'Anonymous');
-    }) ?? [];
+    // First, filter out users who have 0 points for the current period.
+    const filteredUsers = users?.filter(user => getPointsForPeriod(user) > 0) ?? [];
     
     // Now that we have a filtered list, map them to add ranks.
     return filteredUsers.map((user, index) => ({ ...user, rank: index + 1 }));

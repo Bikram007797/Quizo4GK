@@ -9,7 +9,7 @@
  * 1. Top-Level Public Collections: /subjects, /chapters, /questions, and /badges store the
  *    global quiz content. This data is intended to be read-only for all app users.
  * 2. User-Owned Data Tree: All private user data is nested under /users/{userId}. This
- *    includes the user's profile, their quiz attempts, bookmarks, and earned badges.
+ *    includes the user's profile, their quiz attempts, bookmarks, and their earned badges.
  *    This structure allows for simple, performant, and secure path-based authorization.
  *
  * Key Security Decisions:
@@ -89,14 +89,14 @@ service cloud.firestore {
     /**
      * @description Manages user profile data.
      * @path /users/{userId}
-     * @allow (get) Any signed in user can read basic profile info for leaderboards.
-     * @allow (list) Any signed in user can list users for leaderboards.
+     * @allow (get) Any signed in user can read basic profile info.
+     * @allow (list) Any signed in user can list users for the leaderboard.
      * @allow (create) An authenticated user can create their own profile document.
      * @principle A user has exclusive write control over their own root document.
      */
     match /users/{userId} {
       allow get: if isSignedIn();
-      allow list: if isSignedIn(); // Allows querying for leaderboard
+      allow list: if isSignedIn(); // Allows querying for leaderboard.
       allow create: if isNewOwner(userId) && request.resource.data.id == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);

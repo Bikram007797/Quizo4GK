@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
@@ -68,24 +69,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             coins: prev.stats.coins + (updates.coins || 0),
         };
 
-        const currentLevel = newStats.level;
-        const newLevel = LEVEL_THRESHOLDS.findIndex(xp => newStats.xp < xp);
+        const currentLevel = prev.stats.level;
+        const newLevelThresholdIndex = LEVEL_THRESHOLDS.findIndex(xp => newStats.xp < xp);
+        let newLevel = newStats.level;
 
-        if (newLevel > currentLevel || (newLevel === -1 && currentLevel < LEVEL_THRESHOLDS.length)) {
-            const calculatedLevel = newLevel === -1 ? LEVEL_THRESHOLDS.length : newLevel;
-            if (calculatedLevel > currentLevel) {
-                newStats.level = calculatedLevel;
-                 toast({
+        if (newLevelThresholdIndex === -1) { // XP exceeds all thresholds
+            newLevel = LEVEL_THRESHOLDS.length;
+        } else {
+            newLevel = newLevelThresholdIndex;
+        }
+
+        if (newLevel > currentLevel) {
+            newStats.level = newLevel;
+            setTimeout(() => {
+                toast({
                     title: "Level Up!",
                     description: `Congratulations, you've reached Level ${newStats.level}!`,
                 });
-            }
-        } else if (newLevel === 1 && currentLevel === 0) { // From 0 to 1
-             newStats.level = 1;
-             toast({
-                title: "Level Up!",
-                description: `Congratulations, you've reached Level ${newStats.level}!`,
-            });
+            }, 0);
         }
       
       return { ...prev, stats: newStats };
@@ -107,18 +108,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const toggleBookmark = useCallback((questionId: string) => {
     setUserData(prev => {
-      const newBookmarks = prev.bookmarks.includes(questionId)
+      const isCurrentlyBookmarked = prev.bookmarks.includes(questionId);
+      const newBookmarks = isCurrentlyBookmarked
         ? prev.bookmarks.filter(id => id !== questionId)
         : [...prev.bookmarks, questionId];
-      toast({
-        title: newBookmarks.includes(questionId) ? "Bookmarked!" : "Bookmark Removed",
-        description: newBookmarks.includes(questionId) 
-          ? "You can review this question later in your bookmarks." 
-          : "The question has been removed from your bookmarks.",
-      });
+
+      setTimeout(() => {
+        toast({
+          title: !isCurrentlyBookmarked ? "Bookmarked!" : "Bookmark Removed",
+          description: !isCurrentlyBookmarked
+            ? "You can review this question later in your bookmarks."
+            : "The question has been removed from your bookmarks.",
+        });
+      }, 0);
+
       return { ...prev, bookmarks: newBookmarks };
     });
   }, [toast]);
+
 
   const isBookmarked = useCallback((questionId: string) => {
     return userData.bookmarks.includes(questionId);

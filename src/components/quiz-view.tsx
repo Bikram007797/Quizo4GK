@@ -39,12 +39,12 @@ export function QuizView({ quizSet }: QuizViewProps) {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    const now = Date.now();
-    setStartTime(now);
+   useEffect(() => {
+    setStartTime(Date.now());
     const timer = setInterval(() => {
-      setElapsedTime(Math.floor((Date.now() - now) / 1000));
+      setElapsedTime(prevTime => prevTime + 1);
     }, 1000);
+
     return () => clearInterval(timer);
   }, []);
 
@@ -67,7 +67,7 @@ export function QuizView({ quizSet }: QuizViewProps) {
 
   const handleSubmit = () => {
     setIsSubmitting(true);
-    const timeTaken = Math.round((Date.now() - startTime) / 1000);
+    const timeTaken = elapsedTime;
     let score = 0;
     selectedAnswers.forEach((answer, index) => {
       if (answer === quizSet.questions[index].correctOptionIndex) {
@@ -147,10 +147,13 @@ export function QuizView({ quizSet }: QuizViewProps) {
           className="space-y-4"
         >
           {currentQuestion.options.map((option, index) => (
-            <div key={index} className={cn(
+             <div
+              key={index}
+              className={cn(
                 "flex items-center space-x-3 rounded-lg border p-4 transition-all cursor-pointer",
                 selectedOption === index ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'
-              )}>
+              )}
+            >
               <RadioGroupItem value={index.toString()} id={`option-${index}`} />
               <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer text-base">{option}</Label>
             </div>

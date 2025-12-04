@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Bookmark, Loader2, Clock } from 'lucide-react';
+import { Bookmark, Loader2, Clock, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   POINTS_PER_CORRECT_ANSWER,
@@ -35,18 +35,17 @@ export function QuizView({ quizSet }: QuizViewProps) {
   const [selectedAnswers, setSelectedAnswers] = useState<(number | null)[]>(
     Array(quizSet.questions.length).fill(null)
   );
-  const [startTime, setStartTime] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-   useEffect(() => {
-    setStartTime(Date.now());
+  useEffect(() => {
     const timer = setInterval(() => {
       setElapsedTime(prevTime => prevTime + 1);
     }, 1000);
 
     return () => clearInterval(timer);
   }, []);
+
 
   const currentQuestion = quizSet.questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / quizSet.questions.length) * 100;
@@ -62,6 +61,12 @@ export function QuizView({ quizSet }: QuizViewProps) {
   const handleNext = () => {
     if (currentQuestionIndex < quizSet.questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(prev => prev - 1);
     }
   };
 
@@ -147,20 +152,25 @@ export function QuizView({ quizSet }: QuizViewProps) {
           className="space-y-4"
         >
           {currentQuestion.options.map((option, index) => (
-             <div
+            <Label
               key={index}
+              htmlFor={`option-${index}`}
               className={cn(
                 "flex items-center space-x-3 rounded-lg border p-4 transition-all cursor-pointer",
                 selectedOption === index ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'
               )}
             >
               <RadioGroupItem value={index.toString()} id={`option-${index}`} />
-              <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer text-base">{option}</Label>
-            </div>
+              <span className="flex-1 cursor-pointer text-base">{option}</span>
+            </Label>
           ))}
         </RadioGroup>
       </CardContent>
-      <CardFooter className="justify-end">
+      <CardFooter className="justify-between">
+        <Button onClick={handlePrevious} disabled={currentQuestionIndex === 0} size="lg" variant="outline">
+          <ChevronLeft className="mr-2 h-5 w-5" />
+          Previous
+        </Button>
         {currentQuestionIndex < quizSet.questions.length - 1 ? (
           <Button onClick={handleNext} disabled={selectedOption === null} size="lg">Next Question</Button>
         ) : (

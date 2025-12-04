@@ -78,20 +78,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         } else {
             newLevel = newLevelThresholdIndex;
         }
-
+        
         if (newLevel > currentLevel) {
             newStats.level = newLevel;
-            setTimeout(() => {
-                toast({
-                    title: "Level Up!",
-                    description: `Congratulations, you've reached Level ${newStats.level}!`,
-                });
-            }, 0);
         }
       
       return { ...prev, stats: newStats };
     });
-  }, [toast]);
+  }, []);
 
   const addAttempt = useCallback((attempt: Attempt) => {
     setUserData(prev => {
@@ -113,18 +107,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ? prev.bookmarks.filter(id => id !== questionId)
         : [...prev.bookmarks, questionId];
 
-      setTimeout(() => {
-        toast({
-          title: !isCurrentlyBookmarked ? "Bookmarked!" : "Bookmark Removed",
-          description: !isCurrentlyBookmarked
-            ? "You can review this question later in your bookmarks."
-            : "The question has been removed from your bookmarks.",
-        });
-      }, 0);
-
       return { ...prev, bookmarks: newBookmarks };
     });
-  }, [toast]);
+  }, []);
 
 
   const isBookmarked = useCallback((questionId: string) => {

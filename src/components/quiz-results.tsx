@@ -10,13 +10,16 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { CheckCircle, XCircle, Clock, BarChart, Trophy, Star, Gem, TrendingUp, HelpCircle } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, BarChart, Trophy, Star, Gem, TrendingUp, HelpCircle, Bookmark } from 'lucide-react';
 import {
   COINS_PER_CORRECT_ANSWER,
   POINTS_PER_CORRECT_ANSWER,
   XP_PER_COMPLETED_SET,
   XP_BONUS_FOR_PERFECT_SCORE
 } from '@/lib/constants';
+import { useAppContext } from '@/contexts/app-provider';
+import { cn } from '@/lib/utils';
+import { useCallback } from 'react';
 
 type QuizResultsProps = {
   quizSet: QuizSet;
@@ -33,6 +36,8 @@ export function QuizResults({
   timeTaken,
   userAnswers,
 }: QuizResultsProps) {
+  const { isBookmarked, toggleBookmark } = useAppContext();
+
   const accuracy = Math.round((score / totalQuestions) * 100);
   const minutes = Math.floor(timeTaken / 60);
   const seconds = timeTaken % 60;
@@ -48,6 +53,50 @@ export function QuizResults({
     if (index === null) return 'Not Answered';
     return question.options[index];
   }
+
+  const QuestionReviewItem = ({ question, userAnswerIndex, index }: { question: Question, userAnswerIndex: number | null, index: number }) => {
+    const isCorrect = userAnswerIndex === question.correctOptionIndex;
+    const bookmarked = isBookmarked(question.id);
+  
+    const handleToggleBookmark = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        toggleBookmark(question.id);
+    }, [toggleBookmark, question.id]);
+
+    return (
+      <AccordionItem value={`item-${index}`} key={question.id}>
+        <AccordionTrigger>
+          <div className="flex flex-1 items-center justify-between gap-2 text-left">
+            <div className="flex items-center gap-2">
+              {isCorrect ? (
+                <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+              ) : (
+                <XCircle className="h-5 w-5 text-destructive flex-shrink-0" />
+              )}
+              <span>{`Q${index + 1}: ${question.questionText}`}</span>
+            </div>
+          </div>
+        </AccordionTrigger>
+        <AccordionContent className="space-y-3 pl-8">
+          <div className="flex justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleToggleBookmark}
+              aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark question'}
+            >
+              <Bookmark className={cn('mr-2 h-4 w-4', bookmarked ? 'fill-primary text-primary' : 'text-muted-foreground')} />
+              {bookmarked ? 'Bookmarked' : 'Bookmark'}
+            </Button>
+          </div>
+          <p><strong>Your Answer:</strong> <span className={isCorrect ? 'text-green-600' : 'text-destructive'}>{getOptionText(question, userAnswerIndex)}</span></p>
+          {!isCorrect && <p><strong>Correct Answer:</strong> <span className="text-green-600">{getOptionText(question, question.correctOptionIndex)}</span></p>}
+          <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md"><strong>Explanation:</strong> {question.explanation}</p>
+        </AccordionContent>
+      </AccordionItem>
+    );
+  };
+
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6">
@@ -124,29 +173,14 @@ export function QuizResults({
         </CardHeader>
         <CardContent>
             <Accordion type="single" collapsible className="w-full">
-                {quizSet.questions.map((question, index) => {
-                    const userAnswerIndex = userAnswers[index];
-                    const isCorrect = userAnswerIndex === question.correctOptionIndex;
-                    return (
-                        <AccordionItem value={`item-${index}`} key={question.id}>
-                            <AccordionTrigger>
-                               <div className="flex items-center gap-2 text-left">
-                                 {isCorrect ? (
-                                    <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0"/>
-                                ) : (
-                                    <XCircle className="h-5 w-5 text-destructive flex-shrink-0"/>
-                                )}
-                                <span>{`Q${index + 1}: ${question.questionText}`}</span>
-                               </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="space-y-3 pl-8">
-                                <p><strong>Your Answer:</strong> <span className={isCorrect ? 'text-green-600' : 'text-destructive'}>{getOptionText(question, userAnswerIndex)}</span></p>
-                                {!isCorrect && <p><strong>Correct Answer:</strong> <span className="text-green-600">{getOptionText(question, question.correctOptionIndex)}</span></p>}
-                                <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md"><strong>Explanation:</strong> {question.explanation}</p>
-                            </AccordionContent>
-                        </AccordionItem>
-                    );
-                })}
+                {quizSet.questions.map((question, index) => (
+                    <QuestionReviewItem
+                        key={question.id}
+                        question={question}
+                        userAnswerIndex={userAnswers[index]}
+                        index={index}
+                    />
+                ))}
             </Accordion>
         </CardContent>
       </Card>

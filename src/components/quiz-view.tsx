@@ -95,6 +95,7 @@ export function QuizView({ quizSet }: QuizViewProps) {
       timeTaken,
       accuracy,
       timestamp: Date.now(),
+      userAnswers: selectedAnswers,
     });
 
     updateStats({

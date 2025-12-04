@@ -81,11 +81,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         
         if (newLevel > currentLevel) {
             newStats.level = newLevel;
+            toast({
+              title: "Level Up!",
+              description: `Congratulations! You've reached Level ${newLevel}.`,
+            });
         }
       
       return { ...prev, stats: newStats };
     });
-  }, []);
+  }, [toast]);
 
   const addAttempt = useCallback((attempt: Attempt) => {
     setUserData(prev => {
@@ -106,10 +110,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const newBookmarks = isCurrentlyBookmarked
         ? prev.bookmarks.filter(id => id !== questionId)
         : [...prev.bookmarks, questionId];
+      
+      toast({
+        title: isCurrentlyBookmarked ? "Bookmark Removed" : "Bookmarked!",
+        description: isCurrentlyBookmarked
+          ? "The question has been removed from your bookmarks."
+          : "You can find this question in your bookmarks to review later.",
+      });
 
       return { ...prev, bookmarks: newBookmarks };
     });
-  }, []);
+  }, [toast]);
 
 
   const isBookmarked = useCallback((questionId: string) => {
@@ -138,6 +149,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return userData.attempts[quizSetId]?.length || 0;
   }, [userData.attempts]);
 
+  const getLastAttempt = useCallback((quizSetId: string): Attempt | null => {
+    const attempts = userData.attempts[quizSetId];
+    if (!attempts || attempts.length === 0) return null;
+    return attempts[attempts.length - 1];
+  }, [userData.attempts]);
+
   const value = {
     userData,
     theme,
@@ -149,6 +166,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     markSetAsCompleted,
     getBestScore,
     getAttemptsCount,
+    getLastAttempt,
     isLoading
   };
 

@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Medal, Repeat, CheckCircle2, Play } from 'lucide-react';
+import { Medal, Repeat, CheckCircle2, Play, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import { notFound, useParams } from 'next/navigation';
 import { useAppContext } from '@/contexts/app-provider';
@@ -22,7 +22,7 @@ export default function ChapterPage() {
     chapterSlug: string;
   };
 
-  const { getBestScore, getAttemptsCount, userData, isLoading } = useAppContext();
+  const { getBestScore, getAttemptsCount, userData, isLoading, getLastAttempt } = useAppContext();
   
   const [subject, setSubject] = useState<ReturnType<typeof getSubjectBySlug>>(undefined);
   const [chapter, setChapter] = useState<ReturnType<typeof getChapterBySlug>>(undefined);
@@ -76,6 +76,7 @@ export default function ChapterPage() {
               const attempts = getAttemptsCount(set.id);
               const progress = bestScore !== null ? (bestScore / set.questions.length) * 100 : 0;
               const isCompleted = userData.completedSets.includes(set.id);
+              const lastAttempt = getLastAttempt(set.id);
 
               return (
                 <Card key={set.id} className="p-4 sm:p-6">
@@ -102,7 +103,15 @@ export default function ChapterPage() {
                         <Progress value={progress} className="h-2" />
                       </div>
                     </div>
-                    <div className="flex items-center justify-start sm:justify-end">
+                    <div className="flex items-center justify-start sm:justify-end gap-2">
+                       {lastAttempt && (
+                        <Link href={`/quiz/${set.id}/results?score=${lastAttempt.score}&total=${set.questions.length}&time=${lastAttempt.timeTaken}&answers=${encodeURIComponent(JSON.stringify(lastAttempt.userAnswers))}`} passHref>
+                            <Button size="lg" variant="outline">
+                                <BookOpen className="mr-2 h-5 w-5" />
+                                View Solutions
+                            </Button>
+                        </Link>
+                       )}
                       <Link href={`/quiz/${set.id}`} passHref>
                         <Button size="lg" className="w-full sm:w-auto">
                           <Play className="mr-2 h-5 w-5" />

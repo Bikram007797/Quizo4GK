@@ -45,6 +45,7 @@ export type Attempt = {
   timeTaken: number; // in seconds
   accuracy: number; // percentage
   timestamp: number;
+  userAnswers: (number | null)[];
 };
 
 export type UserData = {
@@ -67,5 +68,6 @@ export type AppContextType = {
   markSetAsCompleted: (quizSetId: string) => void;
   getBestScore: (quizSetId: string) => number | null;
   getAttemptsCount: (quizSetId: string) => number;
+  getLastAttempt: (quizSetId: string) => Attempt | null;
   isLoading: boolean;
 };

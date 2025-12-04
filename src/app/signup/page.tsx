@@ -42,31 +42,34 @@ export default function SignupPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
+      // 1. Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      // Update Firebase Auth profile
+      // 2. Update Firebase Auth profile displayName
       await updateProfile(user, { displayName: values.username });
       
-      // Create user document in Firestore
+      // 3. Prepare user data for Firestore
       const userDocRef = doc(firestore, 'users', user.uid);
       const newUserData = {
         ...INITIAL_USER_DATA,
-        id: user.uid,
+        id: user.uid, // CRITICAL: Set the ID to match the auth UID
         username: values.username,
         email: values.email,
       };
       
-      // Use non-blocking setDoc with error handling
+      // 4. Create user document in Firestore (non-blocking)
+      // This will now pass the security rules.
       setDoc(userDocRef, newUserData)
         .then(() => {
             toast({
               title: 'Account Created!',
               description: `Welcome to ${APP_NAME}, ${values.username}!`,
             });
-            router.push('/');
+            router.push('/'); // Navigate on success
         })
         .catch(async (error) => {
+            // This will now be a detailed FirestorePermissionError
             console.error("Firestore setDoc failed:", error);
             const permissionError = new FirestorePermissionError({
               path: userDocRef.path,
@@ -74,18 +77,21 @@ export default function SignupPage() {
               requestResourceData: newUserData,
             });
             errorEmitter.emit('permission-error', permissionError);
+            setIsLoading(false); // Stop loading on Firestore error
         });
 
     } catch (error: any) {
+      // This catch block now only handles Authentication errors
       console.error('Signup auth error:', error);
       toast({
         variant: 'destructive',
         title: 'Sign Up Failed',
-        description: error.message || 'An unexpected error occurred. Please try again.',
+        description: error.code === 'auth/email-already-in-use' 
+            ? 'This email is already in use.' 
+            : 'An unexpected error occurred during sign-up.',
       });
-      setIsLoading(false); // Only set loading to false on auth error
+      setIsLoading(false);
     }
-    // We don't set loading to false here because the non-blocking firestore call will navigate
   }
 
   return (

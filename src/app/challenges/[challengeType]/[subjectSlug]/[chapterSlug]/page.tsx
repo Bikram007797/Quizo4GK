@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getSubjectBySlug, getChapterBySlug, getQuizSetsByChapterId, getChallengeTitle } from '@/lib/quiz-helpers';
-import type { ChallengeType, QuizSet as QuizSetType } from '@/lib/types';
+import { getSubjectBySlug, getChapterBySlug, getQuizSetsByChapterId, getChallengeTitle, getSubjects, getChaptersBySubjectId } from '@/lib/quiz-helpers';
+import type { ChallengeType, QuizSet as QuizSetType, Subject, Chapter } from '@/lib/types';
 import { AppHeader } from '@/components/app-header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +14,27 @@ import Link from 'next/link';
 import { notFound, useParams } from 'next/navigation';
 import { useAppContext } from '@/contexts/app-provider';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CHALLENGE_TYPES } from '@/lib/constants';
+
+// This function is not used in the component itself, but is required for Next.js static export
+export async function generateStaticParams() {
+    const subjects = getSubjects();
+    const paths = [];
+
+    for (const challenge of CHALLENGE_TYPES) {
+        for (const subject of subjects) {
+            const chapters = getChaptersBySubjectId(subject.id);
+            for (const chapter of chapters) {
+                paths.push({
+                    challengeType: challenge.type,
+                    subjectSlug: subject.slug,
+                    chapterSlug: chapter.slug,
+                });
+            }
+        }
+    }
+    return paths;
+}
 
 export default function ChapterPage() {
   const params = useParams();
@@ -24,8 +46,8 @@ export default function ChapterPage() {
 
   const { getBestScore, getAttemptsCount, userData, isLoading, getLastAttempt } = useAppContext();
   
-  const [subject, setSubject] = useState<ReturnType<typeof getSubjectBySlug>>(undefined);
-  const [chapter, setChapter] = useState<ReturnType<typeof getChapterBySlug>>(undefined);
+  const [subject, setSubject] = useState<Subject | undefined>(undefined);
+  const [chapter, setChapter] = useState<Chapter | undefined>(undefined);
   const [quizSets, setQuizSets] = useState<QuizSetType[]>([]);
 
   useEffect(() => {

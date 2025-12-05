@@ -1,11 +1,23 @@
+
 'use client';
 
 import { Suspense } from 'react';
-import { getQuizSetById } from '@/lib/quiz-helpers';
+import { getQuizSetById, getQuizSetsByChapterId } from '@/lib/quiz-helpers';
 import { notFound, useParams, useSearchParams } from 'next/navigation';
 import { AppHeader } from '@/components/app-header';
 import { QuizResults } from '@/components/quiz-results';
 import { Skeleton } from '@/components/ui/skeleton';
+import { chapters } from '@/data/quiz-data';
+
+
+// This function is not used in the component itself, but is required for Next.js static export
+export async function generateStaticParams() {
+  const quizSets = chapters.flatMap(c => getQuizSetsByChapterId(c.id));
+  return quizSets.map(set => ({
+    quizSetId: set.id,
+  }));
+}
+
 
 function ResultsContent() {
     const params = useParams();

@@ -1,3 +1,4 @@
+
 import { getSubjects, getChallengeTitle } from '@/lib/quiz-helpers';
 import type { ChallengeType } from '@/lib/types';
 import { AppHeader } from '@/components/app-header';
@@ -5,12 +6,19 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { CHALLENGE_TYPES } from '@/lib/constants';
 
 type ChallengesPageProps = {
   params: {
     challengeType: ChallengeType;
   };
 };
+
+export async function generateStaticParams() {
+  return CHALLENGE_TYPES.map((challenge) => ({
+    challengeType: challenge.type,
+  }));
+}
 
 export default function ChallengesPage({ params }: ChallengesPageProps) {
   const { challengeType } = params;

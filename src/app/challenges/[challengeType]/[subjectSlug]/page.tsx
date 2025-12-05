@@ -1,9 +1,11 @@
-import { getSubjectBySlug, getChaptersBySubjectId, getChallengeTitle } from '@/lib/quiz-helpers';
+
+import { getSubjectBySlug, getChaptersBySubjectId, getChallengeTitle, getSubjects } from '@/lib/quiz-helpers';
 import type { ChallengeType } from '@/lib/types';
 import { AppHeader } from '@/components/app-header';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { CHALLENGE_TYPES } from '@/lib/constants';
 
 type SubjectPageProps = {
   params: {
@@ -11,6 +13,21 @@ type SubjectPageProps = {
     subjectSlug: string;
   };
 };
+
+export async function generateStaticParams() {
+    const subjects = getSubjects();
+    const paths = [];
+
+    for (const challenge of CHALLENGE_TYPES) {
+        for (const subject of subjects) {
+            paths.push({
+                challengeType: challenge.type,
+                subjectSlug: subject.slug,
+            });
+        }
+    }
+    return paths;
+}
 
 export default function SubjectPage({ params }: SubjectPageProps) {
   const { challengeType, subjectSlug } = params;

@@ -5,7 +5,7 @@ import { Watermark } from '@/components/watermark';
 import { cn } from '@/lib/utils';
 import { APP_NAME, APP_TAGLINE } from '@/lib/constants';
 import './globals.css';
-import { FirebaseClientProvider } from '@/firebase';
+import { FirebaseClientProvider, FirebaseErrorListener } from '@/firebase';
 
 export const metadata: Metadata = {
   title: `${APP_NAME} | ${APP_TAGLINE}`,
@@ -29,12 +29,12 @@ export default function RootLayout({
       </head>
       <body
         className={cn(
-          'min-h-screen bg-background font-body antialiased',
-          'font-body'
+          'min-h-screen bg-background font-sans antialiased'
         )}
       >
         <FirebaseClientProvider>
           <AppProvider>
+            <FirebaseErrorListener />
             <div className="relative flex min-h-screen flex-col">
               {children}
             </div>

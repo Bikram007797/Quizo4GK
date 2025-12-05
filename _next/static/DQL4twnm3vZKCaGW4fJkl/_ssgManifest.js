@@ -1,0 +1,1 @@
+self.__SSG_MANIFEST=new Set(["\u002Fchallenges\u002F[challengeType]","\u002Fchallenges\u002F[challengeType]\u002F[subjectSlug]","\u002Fchallenges\u002F[challengeType]\u002F[subjectSlug]\u002F[chapterSlug]","\u002Fquiz\u002F[quizSetId]","\u002Fquiz\u002F[quizSetId]\u002Fresults"]);self.__SSG_MANIFEST_CB&&self.__SSG_MANIFEST_CB()

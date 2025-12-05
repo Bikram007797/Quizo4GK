@@ -1,6 +1,6 @@
 import type {NextConfig} from 'next';
 
-const repoName = 'quizo-app';
+const repoName = 'Quizo4GK';
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -34,6 +34,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https' as const,
+        hostname: 'api.dicebear.com',
+        port: '',
+        pathname: '/**',
+      }
     ],
   },
 };

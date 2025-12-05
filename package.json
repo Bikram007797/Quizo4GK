@@ -2,7 +2,7 @@
   "name": "nextn",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://<YOUR-USERNAME>.github.io/quizo-app",
+  "homepage": "https://Bikram007797.github.io/Quizo4GK",
   "scripts": {
     "dev": "next dev --turbopack -p 9002",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",

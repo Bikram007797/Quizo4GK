@@ -5,8 +5,8 @@ const repoName = 'Quizo4GK';
 const nextConfig: NextConfig = {
   /* config options here */
   output: 'export',
-  basePath: `/${repoName}`,
-  assetPrefix: `/${repoName}/`,
+  basePath: `/$Quizo4GK`,
+  assetPrefix: `/$Quizo4GK/`,
   typescript: {
     ignoreBuildErrors: true,
   },

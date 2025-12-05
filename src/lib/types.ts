@@ -27,7 +27,7 @@ export type Subject = {
   title: 'GEOGRAPHY' | 'POLITY';
   slug: 'geography' | 'polity';
   chapterIds: string[];
-  icon: React.ComponentType<{ className?: string }>;
+  iconName: 'Globe' | 'Landmark';
 };
 
 export type ChallengeType = 'daily' | 'weekly';

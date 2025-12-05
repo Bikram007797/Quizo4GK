@@ -1,5 +1,4 @@
 import type { Subject, Chapter, QuizSet, Question } from '@/lib/types';
-import { Globe, Landmark } from 'lucide-react';
 
 const geographyQuestions: Omit<Question, 'id'>[] = [
   {
@@ -137,6 +136,6 @@ export const chapters: Chapter[] = [
 ];
 
 export const subjects: Subject[] = [
-  { id: 'geography', title: 'GEOGRAPHY', slug: 'geography', chapterIds: ['geo-c1', 'geo-c2'], icon: Globe },
-  { id: 'polity', title: 'POLITY', slug: 'polity', chapterIds: ['pol-c1', 'pol-c2'], icon: Landmark },
+  { id: 'geography', title: 'GEOGRAPHY', slug: 'geography', chapterIds: ['geo-c1', 'geo-c2'], iconName: 'Globe' },
+  { id: 'polity', title: 'POLITY', slug: 'polity', chapterIds: ['pol-c1', 'pol-c2'], iconName: 'Landmark' },
 ];
